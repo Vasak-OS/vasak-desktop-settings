@@ -11,81 +11,81 @@ end_color = #000000 0
 #-------------------------------------
 # Backgrounds
 # Background 1: Active task
-rounded = 8
+rounded = 20
 border_width = 1
 border_sides = B
 border_content_tint_weight = 0
 background_content_tint_weight = 0
-background_color = #000000 0
-border_color = #00897b 100
-background_color_hover = #000000 0
-border_color_hover = #00897b 100
+background_color = #000000 70
+border_color = #00897b 0
+background_color_hover = #000000 80
+border_color_hover = #00897b 0
 background_color_pressed = #000000 50
-border_color_pressed = #00897b 100
+border_color_pressed = #00897b 0
 
 # Background 2: Iconified task
-rounded = 8
+rounded = 20
 border_width = 1
 border_sides = B
 border_content_tint_weight = 0
 background_content_tint_weight = 0
 background_color = #000000 0
-border_color = #e53935 100
-background_color_hover = #000000 0
-border_color_hover = #e53935 100
+border_color = #e53935 0
+background_color_hover = #000000 20
+border_color_hover = #e53935 0
 background_color_pressed = #000000 40
-border_color_pressed = #ffffff 80
+border_color_pressed = #ffffff 0
 
 # Background 3: Urgent task
-rounded = 6
+rounded = 20
 border_width = 1
 border_sides = B
 border_content_tint_weight = 0
 background_content_tint_weight = 0
-background_color = #000000 0
-border_color = #00a9ff 100
-background_color_hover = #000000 0
-border_color_hover = #00a9ff 100
-background_color_pressed = #000000 60
-border_color_pressed = #00a9ff 100
+background_color = #000000 70
+border_color = #00a9ff 0
+background_color_hover = #000000 80
+border_color_hover = #00a9ff 0
+background_color_pressed = #000000 50
+border_color_pressed = #00a9ff 0
 
 # Background 4: Tooltip
-rounded = 0
+rounded = 20
 border_width = 0
 border_sides =
 border_content_tint_weight = 0
 background_content_tint_weight = 0
-background_color = #1565c0 100
+background_color = #000000 70
 border_color = #000000 0
-background_color_hover = #000000 0
+background_color_hover = #000000 80
 border_color_hover = #000000 0
-background_color_pressed = #000000 0
+background_color_pressed = #000000 50
 border_color_pressed = #000000 0
 
 # Background 5:
-rounded = 0
+rounded = 20
 border_width = 0
 border_sides =
 border_content_tint_weight = 0
 background_content_tint_weight = 0
-background_color = #ffffff 100
+background_color = #000000 70
 border_color = #00a9ff 0
-background_color_hover = #000000 0
+background_color_hover = #000000 80
 border_color_hover = #00a9ff 0
-background_color_pressed = #000000 0
+background_color_pressed = #000000 50
 border_color_pressed = #00a9ff 0
 
 #-------------------------------------
 # Panel
 panel_items = FEBSC
-panel_size = 100% 48
-panel_margin = 0 0
+panel_size = 90% 24
+panel_margin = 0 5
 panel_padding = 10 0 0
 panel_background_id = 0
 wm_menu = 1
 panel_dock = 0
 panel_pivot_struts = 0
-panel_position = bottom right horizontal
+panel_position = top center horizontal
 panel_layer = top
 panel_monitor = primary
 panel_shrink = 1
@@ -106,7 +106,7 @@ scale_relative_to_screen_height = 0
 #-------------------------------------
 # Taskbar
 taskbar_mode = single_desktop
-taskbar_hide_if_empty = 1
+taskbar_hide_if_empty = 0
 taskbar_padding = 0 0 0
 taskbar_background_id = 0
 taskbar_active_background_id = 0
@@ -189,7 +189,7 @@ clock_font_color = #ffffff 100
 clock_padding = 8 0
 clock_background_id = 0
 clock_tooltip = %A, %d Of %B
-clock_tooltip_timezone = 
+clock_tooltip_timezone =
 clock_lclick_command = ldk-cli --title "Calendar" --url "https://calendar.google.com/" --online true
 clock_rclick_command =
 clock_mclick_command =
