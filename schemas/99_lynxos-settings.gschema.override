@@ -19,12 +19,12 @@ icon-theme='Papirus-Dark-Maia'
 monospace-font-name='Source Code Pro Regular 10'
 
 [org.gnome.desktop.background]
-picture-uri='file:///usr/share/lynxsktop/themes/default/backgrounds/background.jpg'
+picture-uri='file:///usr/share/Lynx/lde/themes/default/backgrounds/background.jpg'
 
 [org.pantheon.desktop.gala.appearance]
 attach-modal-dialogs=true
 dim-parents=true
-workspace-switcher-background='file:///usr/share/lynxsktop/themes/default/backgrounds/background.jpg'
+workspace-switcher-background='file:///usr/share/Lynx/lde/themes/default/backgrounds/background.jpg'
 
 [org.gnome.desktop.wm.preferences]
 titlebar-uses-system-font=true
@@ -56,14 +56,6 @@ antialiasing='rgba'
 
 [org.gtk.Settings.FileChooser]
 sort-directories-first=true
-
-[guake.general]
-fullscreen-hide-tabbar=true
-use-trayicon=false
-window-height=100
-window-width=100
-use-scrollbar=false
-window-tabbar=false
 
 [org.blueberry]
 use-symbolic-icons=false
