@@ -1,0 +1,7 @@
+#!/bin/bash
+/usr/share/Lynx/lde/lynx-desktop &
+dex -ae LYNX &
+dunst &
+lxqt-powermanagement &
+plank &
+exec gala
