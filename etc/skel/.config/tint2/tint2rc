@@ -78,7 +78,7 @@ border_color_pressed = #00a9ff 0
 #-------------------------------------
 # Panel
 panel_items = FEBSC
-panel_size = 90% 24
+panel_size = 94% 30
 panel_margin = 0 5
 panel_padding = 10 0 0
 panel_background_id = 0
@@ -169,13 +169,12 @@ launcher_icon_theme = Papirus-Dark-Maia
 launcher_icon_theme_override = 0
 startup_notifications = 1
 launcher_tooltip = 1
-launcher_item_app = /usr/share/applications/chromium.desktop
-launcher_item_app = /usr/share/applications/org.gnome.Nautilus.desktop
 launcher_item_app = /usr/share/applications/org.lynx.desktop.toggleLauncher.desktop
-launcher_item_app = /usr/share/applications/org.lynx.desktop.toggleSettings.desktop
 launcher_item_app = /usr/share/applications/multitaskingview.desktop
+launcher_item_app = /usr/share/applications/org.lynx.desktop.toggleSettings.desktop
 launcher_item_app = /usr/share/applications/org.lynx.desktop.toggleScreen.desktop
 launcher_item_app = /usr/share/applications/org.lynx.desktop.toggleSearch.desktop
+launcher_item_app = /usr/share/applications/org.lynx.desktop.exit.desktop
 
 #-------------------------------------
 # Clock
