@@ -78,7 +78,7 @@ border_color_pressed = #00a9ff 0
 #-------------------------------------
 # Panel
 panel_items = FEBSC
-panel_size = 94% 30
+panel_size = 98% 40
 panel_margin = 0 5
 panel_padding = 10 0 0
 panel_background_id = 0
