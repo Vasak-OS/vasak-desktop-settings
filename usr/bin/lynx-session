@@ -4,4 +4,4 @@ dex -ae LYNX &
 dunst &
 lxqt-powermanagement &
 plank &
-exec gala
+exec mutter
