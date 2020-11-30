@@ -3,5 +3,5 @@
 dex -ae LYNX &
 dunst &
 lxqt-powermanagement &
-plank &
+tint2 &
 exec mutter
