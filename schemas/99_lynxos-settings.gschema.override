@@ -9,13 +9,13 @@ index-on-battery=false
 night-light-enabled=true
 
 [org.gnome.desktop.interface]
-cursor-theme='xcursor-breeze'
+cursor-theme='Lynxos'
 document-font-name='Roboto 10'
 enable-animations=true
 font-name='Roboto 10'
 gtk-im-module='gtk-im-context-simple'
-gtk-theme='Matcha-sea'
-icon-theme='Papirus-Dark-Maia'
+gtk-theme='LynxOS'
+icon-theme='LynxOS'
 monospace-font-name='Source Code Pro Regular 10'
 
 [org.gnome.desktop.background]
