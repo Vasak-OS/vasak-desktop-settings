@@ -1,0 +1,5 @@
+Name=sxhkd
+Comment=HoyKey Daemon
+Exec=/usr/bin/sxhkd
+Terminal=false
+Type=Application
