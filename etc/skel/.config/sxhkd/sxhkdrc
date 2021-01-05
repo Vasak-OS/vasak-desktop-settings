@@ -6,11 +6,11 @@ ctrl + alt + t
     tilix
 
 # Screen Shoot parte
-impr pant
+XF86ScreenSaver
     gnome-screenshot -a
 
 # Screen Shoot parte
-shift + impr pant
+shift + XF86ScreenSaver
     gnome-screenshot -c
 
 # Lynx Launcher
@@ -20,3 +20,7 @@ ctrl + shift + space
 # Lynx Menu
 super
     /usr/share/applications/org.lynx.desktop.toggleLauncher.desktop
+
+# Nautilus
+super + e
+    nautilus
