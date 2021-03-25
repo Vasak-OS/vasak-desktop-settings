@@ -1,0 +1,4 @@
+[net/connman/gtk]
+launch-to-tray=true
+openconnect-use-fsid-by-default=false
+status-icon-enabled=true

@@ -1,0 +1,64 @@
+[org/mate/desktop/background]
+picture-filename='/usr/share/backgrounds/GradientGlowBlue.jpg'
+picture-options='zoom'
+
+[org/mate/pluma]
+auto-indent=true
+insert-spaces=true
+color-scheme='Artix-dark'
+
+[org/mate/caja/desktop]
+computer-icon-visible=true
+font='Roboto 11'
+
+[org/mate/marco/general]
+num-workspaces=1
+theme='Spidey'
+titlebar-font='Roboto Bold 11'
+
+[org/mate/caja/preferences]
+show-image-thumbnails='always'
+
+[org/mate/desktop/font-rendering]
+hinting='full'
+
+[org/mate/desktop/media-handling]
+automount-open=false
+
+[org/mate/screensaver]
+lock-enabled=false
+mode='blank-only'
+themes='[]'
+
+[org/mate/desktop/interface]
+gtk-theme='Artix-dark'
+icon-theme='matefaenzadark'
+gtk-color-scheme='base_color:#2B2B2C\nfg_color:#e3e3e3\ntooltip_fg_color:#eaeaea\nselected_bg_color:#4080fb\nselected_fg_color:#eaeaea\ntext_color:#e3e3e3\nbg_color:#323131\ninsensitive_bg_color:#434446\ntooltip_bg_color:#343434\nlink_color:#4080fb'
+document-font-name='Roboto 11'
+font-name='Roboto 11'
+monospace-font-name='Roboto Mono 11'
+
+[org/mate/terminal/global]
+use-menu-accelerators=false
+use-mnemonics=false
+
+[org/mate/terminal/profiles/default]
+background-color='#000000000000'
+bold-color='#000000000000'
+foreground-color='#AAAAAAAAAAAA'
+palette='#2E2E34343636:#CCCC00000000:#4E4E9A9A0606:#C4C4A0A00000:#34346565A4A4:#757550507B7B:#060698209A9A:#D3D3D7D7CFCF:#555557575353:#EFEF29292929:#8A8AE2E23434:#FCFCE9E94F4F:#72729F9FCFCF:#ADAD7F7FA8A8:#3434E2E2E2E2:#EEEEEEEEECEC'
+scrollback-unlimited=true
+use-theme-colors=false
+visible-name='Default'
+
+[org/mate/panel/general]
+locked-down=false
+
+[org/mate/power-manager]
+backlight-battery-reduce=false
+
+[org/mate/desktop/peripherals/mouse]
+cursor-theme='Premium'
+
+[org/mate/notification-daemon]
+theme='standard'
