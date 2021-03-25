@@ -4,4 +4,4 @@ dex -ae LYNX &
 dunst &
 lxqt-powermanagement &
 tint2 &
-exec mutter
+exec muffin
