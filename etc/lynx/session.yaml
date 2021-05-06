@@ -1,10 +1,9 @@
 lde:
   - /usr/share/Lynx/lde/lynx-desktop
   - dunst
-  - tint2
 
 dex:
   - dex -aev LYNX
 
 wm:
-  - gala
+  - awesome
