@@ -1,5 +1,7 @@
 lde:
-  - /usr/share/Lynx/lde/lynx-desktop
+  - lynx-desktop
+  - lynx-dock
+  - lynx-desktop-service
   - dunst
 
 dex:
