@@ -2,10 +2,10 @@ lde:
   - lynx-desktop
   - lynx-dock
   - lynx-desktop-service
-  - dunst
+#  - dunst
 
 dex:
   - dex -aev LYNX
 
 wm:
-  - awesome
+  - compiz
