@@ -8,4 +8,4 @@ dex:
   - dex -aev LYNX
 
 wm:
-  - compiz
+  - openbox
