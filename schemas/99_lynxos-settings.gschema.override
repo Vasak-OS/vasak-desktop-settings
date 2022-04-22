@@ -21,11 +21,6 @@ monospace-font-name='Source Code Pro Regular 10'
 [org.gnome.desktop.background]
 picture-uri='file:///usr/share/Lynx/lde/themes/default/backgrounds/background.jpg'
 
-[org.pantheon.desktop.gala.appearance]
-attach-modal-dialogs=true
-dim-parents=true
-workspace-switcher-background='file:///usr/share/Lynx/lde/themes/default/backgrounds/background.jpg'
-
 [org.gnome.desktop.wm.preferences]
 titlebar-uses-system-font=true
 button-layout='appmenu:minimize,maximize,close'
@@ -60,9 +55,3 @@ sort-directories-first=true
 [org.blueberry]
 use-symbolic-icons=false
 
-[net.launchpad.plank.dock.settings]
-alignment='start'
-dock-items=['org.lynx.desktop.toggleLauncher.dockitem', 'gala-multitaskingview.dockitem', 'org.lynx.desktop.toggleScreen.dockitem', 'org.lynx.desktop.toggleSettings.dockitem', 'org.lynx.desktop.toggleSearch.dockitem', 'org.gnome.Nautilus.dockitem', 'org.gnome.Geary.dockitem', 'chromium.dockitem', 'trash.dockitem', 'org.lynx.desktop.exit.dockitem']
-hide-mode='intelligent'
-icon-size=32
-theme='Transparent'
