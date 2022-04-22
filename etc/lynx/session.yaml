@@ -2,6 +2,7 @@ lde:
   - lynx-desktop
   - lynx-dock
   - lynx-desktop-service
+  - picom -b
 #  - dunst
 
 dex:
