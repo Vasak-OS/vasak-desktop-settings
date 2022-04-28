@@ -1,4 +1,5 @@
 lde:
+  - lynx-desktop-service
   - lynx-desktop
   - lynx-dock
   - picom -b
