@@ -3,7 +3,6 @@ lde:
   - lynx-desktop
   - lynx-dock
   - picom -b
-  - stalonetray
 #  - dunst
 
 dex:
