@@ -2,11 +2,12 @@ lde:
   - lynx-desktop-service
   - lynx-desktop
   - lynx-dock
-  - picom -b
+#  - picom -b
 #  - dunst
 
 dex:
   - dex -aev LYNX
 
 wm:
-  - openbox
+  - gala
+  - mutter
