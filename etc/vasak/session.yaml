@@ -1,0 +1,13 @@
+lde:
+  - vasak-desktop-service
+  - vasak-desktop
+  - navale
+#  - picom -b
+#  - dunst
+
+dex:
+  - dex -aev VASAK
+
+wm:
+  - gala
+  - mutter

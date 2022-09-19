@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Vasak OS
+Comment=Desktop for VasakOS
+Exec=/usr/bin/vasak-session
+Icon=/usr/share/Lynx/lynx-desktop/icon.svg
