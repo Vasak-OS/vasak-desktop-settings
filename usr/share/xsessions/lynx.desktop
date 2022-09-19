@@ -1,5 +1,0 @@
-[Desktop Entry]
-Name=LynxOS
-Comment=Lynx Desktop Enviroment
-Exec=/usr/bin/lynx-session
-Icon=/usr/share/Lynx/lynx-desktop/icon.svg
