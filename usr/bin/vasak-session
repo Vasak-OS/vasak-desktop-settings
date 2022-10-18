@@ -25,12 +25,12 @@ log = logger()
 
 
 def load_settings():
-    session = "/etc/vasak/session.yaml"
+    session_path = "/etc/vasak/session.yaml"
     try:
-        with open(session) as f:
+        with open(session_path) as f:
             return yaml.load(f, Loader=yaml.FullLoader)
     except FileNotFoundError:
-        output = f"{session} not found"
+        output = f"{session_path} not found"
         if log:
             log.info(output)
         else:
@@ -66,11 +66,11 @@ async def run(cmd, restart=False):
 
 
 def session():
-    lde = load_settings().get("lde")
+    vde = load_settings().get("vde")
     wm = load_settings().get("wm")
     dex = load_settings().get("dex")
     tasks = [run(wm[0], restart=True)]
-    for task in lde:
+    for task in vde:
         tasks.append(run(task, restart=True))
 
     tasks.append(run(dex[0]))
