@@ -9,5 +9,4 @@ dex:
   - dex -aev VASAK
 
 wm:
-  - gala
-  - mutter
+  - wayfire &
