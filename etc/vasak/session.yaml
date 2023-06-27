@@ -1,12 +1,12 @@
 vde:
-  - vasak-desktop-service
-  - vasak-desktop
-  - navale
-#  - picom -b
-#  - dunst
+    #  - vasak-desktop-service
+    - vasak-desktop
+    - navale
+    #  - picom -b
+    #  - dunst
 
 dex:
-  - dex -aev VASAK
+    - dex -aev VASAK
 
 wm:
-  - wayfire &
+    - wayfire &
