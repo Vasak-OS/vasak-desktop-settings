@@ -9,4 +9,4 @@ dex:
     - dex -aev VASAK
 
 wm:
-    - kwin_x11
+    - kwin_wayland

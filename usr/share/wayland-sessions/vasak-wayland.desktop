@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Vasak OS (wayland)
+Comment=Desktop for VasakOS
+Exec=/usr/bin/vasak-session-wayland
+Icon=/usr/share/Vasak/vasak-desktop/icon.svg
