@@ -3,8 +3,6 @@
 import logging
 import yaml
 import asyncio
-import subprocess
-
 
 def logger():
     try:
