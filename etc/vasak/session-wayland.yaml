@@ -1,6 +1,6 @@
 vde:
     #  - vasak-desktop-service
-    - vasak-desktop
+    # - vasak-desktop
     - navale
     #  - picom -b
     #  - dunst
