@@ -2,11 +2,11 @@ vde:
     #  - vasak-desktop-service
     #- vasak-desktop
     - navale
-    #  - picom -b
-    #  - dunst
+    - tilix
+    - dunst
 
 dex:
     - dex -aev VASAK
 
 wm:
-    - kwin_x11
+    - xfwm4
