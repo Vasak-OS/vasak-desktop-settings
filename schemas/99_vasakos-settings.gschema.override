@@ -15,7 +15,7 @@ enable-animations=true
 font-name='Roboto 10'
 gtk-im-module='gtk-im-context-simple'
 gtk-theme='LynxOS'
-icon-theme='LynxOS'
+icon-theme='Fluent'
 monospace-font-name='Source Code Pro Regular 10'
 
 [org.gnome.desktop.background]
