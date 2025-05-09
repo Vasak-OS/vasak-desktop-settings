@@ -1,6 +1,5 @@
 vde:
-    #  - vasak-desktop-service
-    #- vasak-desktop
+    - vasak-desktop
     - vpanel
     - tilix
     - dunst
