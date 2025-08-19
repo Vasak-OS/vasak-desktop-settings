@@ -1,7 +1,5 @@
 vde:
     - vasak-desktop
-    - vpanel
-    - tilix
 
 dex:
     - dex -aev VASAK
