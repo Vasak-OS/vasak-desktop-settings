@@ -4,6 +4,8 @@ import logging
 import yaml
 import asyncio
 import os
+import subprocess
+import time
 
 def logger():
     try:
@@ -21,12 +23,28 @@ def logger():
         print("No permission to write log")
         return False
 
+def wait_for_bluetooth():
+    """Espera hasta que el servicio bluetooth esté activo."""
+    while True:
+        result = subprocess.run(
+            ["systemctl", "is-active", "--quiet", "bluetooth.service"]
+        )
+        if result.returncode == 0:
+            if log:
+                log.info("bluetooth.service está activo")
+            break
+        else:
+            if log:
+                log.debug("Esperando bluetooth.service...")
+            time.sleep(1)
+
 
 log = logger()
 
 
 def load_settings():
     session_path = "/etc/vasak/session-x11.yaml"
+    wait_for_bluetooth()
     try:
         with open(session_path) as f:
             return yaml.load(f, Loader=yaml.FullLoader)
