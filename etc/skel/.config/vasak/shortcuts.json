@@ -1,0 +1,76 @@
+{
+  "shortcuts": [
+    {
+      "id": "system_terminal",
+      "name": "Abrir Terminal",
+      "description": "Abre una nueva ventana de terminal",
+      "keys": "Ctrl+Alt+T",
+      "category": "system",
+      "editable": true,
+      "command": "gnome-terminal"
+    },
+    {
+      "id": "system_file_manager",
+      "name": "Gestor de Archivos",
+      "description": "Abre el gestor de archivos",
+      "keys": "Super+E",
+      "category": "system",
+      "editable": true,
+      "command": "nautilus"
+    },
+    {
+      "id": "system_lock",
+      "name": "Bloquear Pantalla",
+      "description": "Bloquea la sesión actual",
+      "keys": "Super+L",
+      "category": "system",
+      "editable": true,
+      "command": "loginctl lock-session"
+    },
+    {
+      "id": "system_screenshot",
+      "name": "Captura de Pantalla",
+      "description": "Toma una captura de toda la pantalla",
+      "keys": "Print",
+      "category": "system",
+      "editable": true,
+      "command": "gnome-screenshot"
+    },
+    {
+      "id": "vasak_search",
+      "name": "Búsqueda Global",
+      "description": "Abre la búsqueda global del sistema",
+      "keys": "Super+Space",
+      "category": "vasak",
+      "editable": true,
+      "command": null
+    },
+    {
+      "id": "vasak_menu",
+      "name": "Menú de Aplicaciones",
+      "description": "Abre el menú principal de VasakOS",
+      "keys": "Super",
+      "category": "vasak",
+      "editable": true,
+      "command": null
+    },
+    {
+      "id": "vasak_control_center",
+      "name": "Centro de Control",
+      "description": "Abre el centro de control del sistema",
+      "keys": "Super+C",
+      "category": "vasak",
+      "editable": true,
+      "command": null
+    },
+    {
+      "id": "vasak_config",
+      "name": "Configuración",
+      "description": "Abre la aplicación de configuración",
+      "keys": "Super+,",
+      "category": "vasak",
+      "editable": true,
+      "command": null
+    }
+  ]
+}
