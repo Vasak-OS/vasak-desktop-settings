@@ -9,17 +9,17 @@ index-on-battery=false
 night-light-enabled=true
 
 [org.gnome.desktop.interface]
-cursor-theme='Lynxos'
+cursor-theme='VasakOS'
 document-font-name='Roboto 10'
 enable-animations=true
 font-name='Roboto 10'
 gtk-im-module='gtk-im-context-simple'
-gtk-theme='LynxOS'
-icon-theme='Fluent'
+gtk-theme='VasakOS'
+icon-theme='VasakOS'
 monospace-font-name='Source Code Pro Regular 10'
 
 [org.gnome.desktop.background]
-picture-uri='file:///usr/share/Lynx/lde/themes/default/backgrounds/background.jpg'
+picture-uri='file:///usr/share/VasakOS/lde/themes/default/backgrounds/background.jpg'
 
 [org.gnome.desktop.wm.preferences]
 titlebar-uses-system-font=true
