@@ -8,7 +8,7 @@ Generate packages for diferents *distros*
 
 ### Arch Based
 
-For Arch based distros you can use oficial VasakOS repository or oficial [PKGBUILDS]()
+For Arch based distros you can use oficial VasakOS repository or oficial [PKGBUILDS](https://github.com/Vasak-OS/PKGBUILDS)
 
 ### Debian Base
 
