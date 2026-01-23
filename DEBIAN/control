@@ -2,7 +2,7 @@ Package: vasak-desktop-settings
 Version: 0.1.2
 Architecture: all
 Maintainer: Joaquin (Pato) Decima <jdecima@vasak.net.ar>
-Depends: xfwm4, dex, python3-yaml, policykit-1-gnome, vasak-icons-theme
+Depends: xfwm4, dex, python3-yaml, policykit-1-gnome, vasakos-icon-theme
 Description: Settings for vasak-desktop. 
  Tools and preconfigurations for Vasak Desktop.
  
