@@ -1,11 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import logging
 import yaml
 import asyncio
 import os
-import subprocess
-import time
 
 def logger():
     try:
