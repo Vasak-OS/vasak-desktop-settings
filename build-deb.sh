@@ -9,4 +9,4 @@ cp -r schemas source/
 rm -r source/etc/skel
 rm -r source/etc/vasakos
 
-dpkg-deb --build --root-owner-group source output/vasakos-desktop-settings_0.1.3_all.deb
+dpkg-deb --build --root-owner-group source output/vasak-desktop-settings_0.1.3_all.deb
