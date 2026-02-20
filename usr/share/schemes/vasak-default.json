@@ -1,0 +1,87 @@
+{
+  "id": "vasak-default",
+  "name": "Vasak Default",
+  "author": "Vasak Group",
+  "description": "Color Scheme default to VasakOS based on catppuccin",
+  "version": "0.0.1",
+  "colors": {
+    "dark": {
+      "ui": {
+        "color": {
+          "primary": "#eba0ac",
+          "secondary": "#cba6f7"
+        },
+        "text": {
+          "main": "#cdd6f4",
+          "muted": "#a6adc8",
+          "on-primary": "#cdd6f4"
+        },
+        "background": "#1e1e2e",
+        "border": "#11111b",
+        "surface": "#313244"
+      },
+      "terminal": {
+        "foreground": "#cdd6f4",
+        "background": "#1e1e2e",
+        "cursor": "#eba0ac",
+        "ansi": {
+          "black": "#181825",
+          "red": "#f38ba8",
+          "green": "#a6e3a1",
+          "yellow": "#f9e2af",
+          "blue": "#89b4fa",
+          "magenta": "#eba0ac",
+          "cyan": "#89dceb",
+          "white": "#cdd6f4",
+          "brightBlack": "#181825",
+          "brightRed": "#f38ba8",
+          "brightGreen": "#a6e3a1",
+          "brightYellow": "#f9e2af",
+          "brightBlue": "#89b4fa",
+          "brightMagenta": "#eba0ac",
+          "brightCyan": "#89dceb",
+          "brightWhite": "#cdd6f4"
+        }
+      }
+    },
+    "light": {
+      "ui": {
+        "color": {
+          "primary": "#dd7878",
+          "secondary": "#8839ef"
+        },
+        "text": {
+          "main": "#4c4f69",
+          "muted": "#6c6f85",
+          "on-primary": "#5c5f77"
+        },
+        "background": "#eff1f5",
+        "border": "#dce0e8",
+        "surface": "#ccd0da"
+      },
+      "terminal": {
+        "foreground": "#4c4f69",
+        "background": "#eff1f5",
+        "cursor": "#dd7878",
+        "ansi": {
+          "black": "#4c4f69",
+          "red": "#d20f39",
+          "green": "#40a02b",
+          "yellow": "#df8e1d",
+          "blue": "#1e66f5",
+          "magenta": "#8839ef",
+          "cyan": "#04a5e5",
+          "white": "#e6e9ef",
+          "brightBlack": "#4c4f69",
+          "brightRed": "#d20f39",
+          "brightGreen": "#40a02b",
+          "brightYellow": "#df8e1d",
+          "brightBlue": "#1e66f5",
+          "brightMagenta": "#8839ef",
+          "brightCyan": "#04a5e5",
+          "brightWhite": "#e6e9ef"
+        }
+      }
+    }
+  }
+}
