@@ -18,9 +18,6 @@ gtk-theme='VasakOS'
 icon-theme='VasakOS'
 monospace-font-name='Source Code Pro Regular 10'
 
-[org.gnome.desktop.background]
-picture-uri='file:///usr/share/VasakOS/lde/themes/default/backgrounds/background.jpg'
-
 [org.gnome.desktop.wm.preferences]
 titlebar-uses-system-font=true
 button-layout='appmenu:minimize,maximize,close'
@@ -31,13 +28,6 @@ tap-to-click=true
 click-method='areas'
 two-finger-scrolling-enabled=true
 tap-and-drag=true
-
-[org.gnome.nautilus.icon-view]
-default-zoom-level='small'
-
-[org.gnome.nautilus.preferences]
-thumbnail-limit=1000
-show-create-link=true
 
 [org.gnome.gedit.preferences.editor]
 auto-indent=true
