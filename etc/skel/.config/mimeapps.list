@@ -5,7 +5,7 @@ text/plain=gedit.desktop
 application/xml=gedit.desktop
 application/x-shellscript=gedit.desktop
 image/png=gthumb.desktop;
-inode/directory=nautilus.desktop;
+inode/directory=vasak-file-manager.desktop;
 
 [Added Associations]
 application/x-executable=gedit.desktop;
@@ -14,4 +14,4 @@ text/plain=gedit.desktop;
 application/xml=gedit.desktop;
 application/x-shellscript=gedit.desktop;
 image/png=gthumb.desktop;
-inode/directory=nautilus.desktop;
+inode/directory=vasak-file-manager.desktop;
