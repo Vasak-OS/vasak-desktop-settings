@@ -3,13 +3,5 @@
   <property name="general" type="empty">
     <property name="show_shadow" type="bool" value="false" />
     <property name="show_popup_shadow" type="bool" value="false" />
-
-    <property name="use_compositing" type="bool" value="true" />
-
-    <property name="raise_with_any_button" type="bool" value="false" />
-    <property name="urgent_blink" type="bool" value="false" />
-
-    <property name="theme" type="string" value="Default" />
-    <property name="button_layout" type="string" value="O|HMC" />
   </property>
 </channel>
