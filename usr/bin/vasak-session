@@ -1,0 +1,9 @@
+#!/bin/bash
+
+export XDG_CURRENT_DESKTOP=Vasak
+export XDG_SESSION_DESKTOP=vasak
+export XDG_SESSION_TYPE=wayland
+export QT_QPA_PLATFORM=wayland
+export GDK_BACKEND=wayland
+
+exec wayfire

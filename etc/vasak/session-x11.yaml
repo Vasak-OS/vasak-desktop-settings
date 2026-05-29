@@ -1,8 +1,0 @@
-vde:
-    - vasak-desktop
-
-dex:
-    - dex -aev VASAK
-
-wm:
-    - xfwm4
