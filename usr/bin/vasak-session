@@ -1,9 +1,26 @@
 #!/bin/bash
 
 export XDG_CURRENT_DESKTOP=Vasak
+export DESKTOP_SESSION=vasak
 export XDG_SESSION_DESKTOP=vasak
 export XDG_SESSION_TYPE=wayland
-export QT_QPA_PLATFORM=wayland
-export GDK_BACKEND=wayland
+
+# Wayland/GTK stack used by Tauri 2 and other native Linux apps.
+export QT_QPA_PLATFORM='wayland;xcb'
+export QT_QPA_PLATFORMTHEME=qt6ct
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_ENABLE_HIGHDPI_SCALING=1
+export GDK_BACKEND=wayland,x11
+export MOZ_ENABLE_WAYLAND=1
+
+# Electron/Chromium compatibility, kept as fallback for XWayland-capable apps.
+export ELECTRON_OZONE_PLATFORM_HINT=auto
+export OZONE_PLATFORM_HINT=auto
+export NIXOS_OZONE_WL=1
+
+# Extra desktop integrations.
+export CLUTTER_BACKEND=wayland
+export _JAVA_AWT_WM_NONREPARENTING=1
 
 exec wayfire
