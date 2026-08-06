@@ -23,4 +23,8 @@ export NIXOS_OZONE_WL=1
 export CLUTTER_BACKEND=wayland
 export _JAVA_AWT_WM_NONREPARENTING=1
 
-exec wayfire
+# Launch Wayfire under uwsm so the whole graphical session is a proper systemd
+# user unit hierarchy: correct environment propagation (via `uwsm finalize` in
+# wayfire.ini), supervised graphical-session daemons, and clean teardown at
+# logout. NOTE: verify the flags against the installed uwsm version.
+exec uwsm start -D Vasak wayfire
