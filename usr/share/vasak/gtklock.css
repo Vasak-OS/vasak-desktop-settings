@@ -1,0 +1,41 @@
+/* VasakOS gtklock theme — matches the vasak-session-manager greeter (dark). */
+
+window {
+  background-color: #1e1e2e; /* ui-background-dark */
+  color: #cdd6f4;            /* text-main-dark */
+}
+
+#clock-label {
+  font-size: 64px;
+  font-weight: bold;
+  color: #cdd6f4;
+  margin-bottom: 24px;
+}
+
+#body {
+  color: #cdd6f4;
+}
+
+#input-label {
+  color: #a6adc8; /* text-muted-dark */
+  margin-bottom: 8px;
+}
+
+entry {
+  min-width: 280px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #11111b;  /* ui-border-dark */
+  background-color: #313244;  /* ui-surface-dark */
+  color: #cdd6f4;
+}
+
+entry:focus {
+  border-color: #dd7878; /* primary */
+  box-shadow: 0 0 0 2px rgba(221, 120, 120, 0.4);
+}
+
+#error-label {
+  color: #f38ba8; /* status-error-dark */
+  margin-top: 8px;
+}
