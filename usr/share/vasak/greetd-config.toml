@@ -1,0 +1,19 @@
+# VasakOS greetd configuration (reference for INSTALLED systems).
+#
+# The `greetd` package owns /etc/greetd/config.toml, so this canonical config is
+# shipped here and must be copied to /etc/greetd/config.toml by the installer
+# (vasakos-calamares-config) or a post-install step to avoid a pacman file
+# conflict.
+#
+# To auto-unlock the vasak keyring at login, also add to /etc/pam.d/greetd:
+#     auth       optional  pam_vasak_keyring.so
+#     session    optional  pam_vasak_keyring.so
+
+[terminal]
+vt = 7
+
+# The greeter: the Tauri UI hosted in cage, run as the unprivileged `greeter`
+# user that the greetd package provides.
+[default_session]
+command = "/usr/bin/vasak-session-manager-launch"
+user = "greeter"
