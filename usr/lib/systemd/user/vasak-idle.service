@@ -1,0 +1,18 @@
+# Bloqueo por inactividad. Reemplaza al swayidle que antes se lanzaba desde
+# [autostart] en wayfire.ini: los demonios de la sesión los administra systemd.
+#
+# vasak-settings escribe una versión propia en ~/.config/systemd/user/ cuando el
+# usuario cambia los tiempos; las unidades de usuario tienen precedencia sobre
+# esta, así que los cambios no se pisan al actualizar el paquete.
+[Unit]
+Description=Bloqueo por inactividad de VasakOS (swayidle)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/swayidle -w timeout 300 '/usr/bin/gtklock -s /usr/share/vasak/gtklock.css' before-sleep '/usr/bin/gtklock -s /usr/share/vasak/gtklock.css'
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target
