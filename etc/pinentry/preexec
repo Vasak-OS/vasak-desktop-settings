@@ -1,0 +1,22 @@
+# Sourced by /usr/bin/pinentry before it picks a backend.
+#
+# That wrapper only reaches for a graphical dialog when it sees DISPLAY or
+# XDG_SESSION_TYPE=wayland. pinentry is launched by gpg-agent, and gpg-agent
+# inherits the environment of whatever started it first — which is often not the
+# graphical session. When that happens the wrapper falls back to the curses
+# backend and draws the passphrase prompt into a terminal that nobody is
+# looking at: importing a private key simply appears to do nothing.
+#
+# Looking for the session's Wayland socket answers the question directly,
+# instead of trusting a variable that may never have been exported. A real
+# console login has no socket, so the text backends still win there.
+
+if [ -z "$WAYLAND_DISPLAY" ] && [ -z "$DISPLAY" ]; then
+    for _socket in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/wayland-*; do
+        [ -S "$_socket" ] || continue
+        WAYLAND_DISPLAY="${_socket##*/}"
+        export WAYLAND_DISPLAY XDG_SESSION_TYPE=wayland
+        break
+    done
+    unset _socket
+fi
