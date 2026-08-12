@@ -4,6 +4,11 @@
 # vasak-settings escribe una versión propia en ~/.config/systemd/user/ cuando el
 # usuario cambia los tiempos; las unidades de usuario tienen precedencia sobre
 # esta, así que los cambios no se pisan al actualizar el paquete.
+#
+# El bloqueo es vasak-lock, no gtklock a secas: arma el estilo y el fondo con la
+# configuración del momento y después ejecuta gtklock. Antes de suspender va con
+# -d, que devuelve el control apenas la pantalla quedó bloqueada; sin eso
+# swayidle espera a que alguien desbloquee y la suspensión nunca llega.
 [Unit]
 Description=Bloqueo por inactividad de VasakOS (swayidle)
 PartOf=graphical-session.target
@@ -11,7 +16,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/swayidle -w timeout 300 '/usr/bin/gtklock -s /usr/share/vasak/gtklock.css' before-sleep '/usr/bin/gtklock -s /usr/share/vasak/gtklock.css'
+ExecStart=/usr/bin/swayidle -w timeout 300 '/usr/bin/vasak-lock' before-sleep '/usr/bin/vasak-lock -d'
 Restart=on-failure
 
 [Install]

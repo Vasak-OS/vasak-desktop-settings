@@ -1,0 +1,122 @@
+/* VasakOS lock screen — the same visual language as the Vasak apps.
+ *
+ * This is a template, not a stylesheet: /usr/bin/vasak-lock renders it right
+ * before every lock with the colours, the corner radius and the font that
+ * ~/.config/vasak/vasak.conf has at that moment, so changing the theme in
+ * Configuración is enough for the lock screen to follow. Put your own copy in
+ * ~/.config/vasak/gtklock.css.in to replace it.
+ *
+ * The tokens are written between double braces and are named after the app
+ * variables they come from — primary, secondary, background, surface, border,
+ * text-main, text-muted, text-on-primary, status-error, status-warning,
+ * radius, radius-window. Append /NN for the same colour at NN% alpha, the way
+ * the apps write bg-ui-bg/80. The font-declaration token expands to the
+ * configured font family, or to nothing when the user has not picked one.
+ *
+ * The wallpaper reaches `window` as a background-image from gtklock's own
+ * stylesheet, which loads at a lower priority than this file: set colours
+ * here, never background-image, or the blur is painted over and lost.
+ */
+
+window {
+  background-color: {{background}};
+  color: {{text-main}};
+  {{font-declaration}}
+}
+
+/* The clock sits on the wallpaper, outside the card: a shadow keeps it legible
+   over a bright photo without darkening the whole screen. */
+#clock-label {
+  font-weight: bold;
+  color: {{text-main}};
+  text-shadow: 0 1px 4px {{background/70}};
+}
+
+#date-label {
+  color: {{text-muted}};
+  text-shadow: 0 1px 4px {{background/70}};
+  margin-bottom: 24px;
+}
+
+/* Same card as the greeter: translucent over the wallpaper, rounded with the
+   window radius, hairline border. It goes on #window-box because GtkGrid and
+   GtkRevealer draw no background of their own — and only where the password
+   form is, so the other monitors keep showing the clock over the wallpaper. */
+window.focused:not(.hidden) #window-box {
+  background-color: {{background/80}};
+  border: 1px solid {{border}};
+  border-radius: {{radius-window}};
+  padding: 24px;
+}
+
+#input-label {
+  color: {{text-main}};
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+#input-field {
+  min-width: 320px;
+  padding: 8px 12px;
+  background-image: none;
+  background-color: {{background/80}};
+  border: 1px solid {{border}};
+  border-radius: {{radius}};
+  box-shadow: none;
+  color: {{text-main}};
+  caret-color: {{primary}};
+}
+
+/* The apps draw focus as a two-pixel primary ring, not as a border colour. */
+#input-field:focus {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px {{primary}};
+}
+
+#input-field selection {
+  background-color: {{primary}};
+  color: {{text-on-primary}};
+}
+
+/* gtklock marks the unlock button `suggested-action`, which the GTK theme
+   paints with its own accent — this is what puts the system colour back. */
+#unlock-button {
+  background-image: none;
+  background-color: {{primary}};
+  color: {{text-on-primary}};
+  border: none;
+  border-radius: {{radius}};
+  box-shadow: none;
+  text-shadow: none;
+  padding: 8px 16px;
+  margin-top: 16px;
+  font-weight: bold;
+}
+
+#unlock-button:hover,
+#unlock-button:active,
+#unlock-button:checked {
+  background-color: {{secondary}};
+}
+
+#unlock-button:focus {
+  box-shadow: 0 0 0 2px {{primary/40}};
+}
+
+#unlock-button:disabled {
+  opacity: 0.5;
+}
+
+#warning-label {
+  color: {{status-warning}};
+  margin-top: 8px;
+}
+
+#error-label {
+  color: {{status-error}};
+  margin-top: 8px;
+}
+
+#message-box label {
+  color: {{text-muted}};
+}
