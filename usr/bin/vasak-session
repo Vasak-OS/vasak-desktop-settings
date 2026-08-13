@@ -5,6 +5,25 @@ export DESKTOP_SESSION=vasak
 export XDG_SESSION_DESKTOP=vasak
 export XDG_SESSION_TYPE=wayland
 
+# The keyboard the installer was told about. Wayfire's default for xkb_layout is
+# a hardcoded `us`, so without this the desktop types in US no matter what was
+# chosen during the installation or with localectl afterwards; the shipped
+# wayfire.ini leaves xkb_layout empty precisely so libxkbcommon falls back to
+# these. A layout written in wayfire.ini still wins over them.
+if [ -r /etc/vconsole.conf ]; then
+    while IFS='=' read -r key value; do
+        value=${value%\"}
+        value=${value#\"}
+        [ -n "$value" ] || continue
+        case "$key" in
+            XKBLAYOUT) export XKB_DEFAULT_LAYOUT="$value" ;;
+            XKBVARIANT) export XKB_DEFAULT_VARIANT="$value" ;;
+            XKBMODEL) export XKB_DEFAULT_MODEL="$value" ;;
+            XKBOPTIONS) export XKB_DEFAULT_OPTIONS="$value" ;;
+        esac
+    done < /etc/vconsole.conf
+fi
+
 # Wayland/GTK stack used by Tauri 2 and other native Linux apps.
 export QT_QPA_PLATFORM='wayland;xcb'
 export QT_QPA_PLATFORMTHEME=qt6ct
