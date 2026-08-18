@@ -5,10 +5,20 @@
 # usuario cambia los tiempos; las unidades de usuario tienen precedencia sobre
 # esta, así que los cambios no se pisan al actualizar el paquete.
 #
-# El bloqueo es vasak-lock, no gtklock a secas: arma el estilo y el fondo con la
-# configuración del momento y después ejecuta gtklock. Antes de suspender va con
-# -d, que devuelve el control apenas la pantalla quedó bloqueada; sin eso
-# swayidle espera a que alguien desbloquee y la suspensión nunca llega.
+# El bloqueo es vasak-lock-screen, la misma interfaz que la pantalla de inicio:
+# lee los colores, el radio y la tipografía de la configuración, y muestra tu
+# fondo de escritorio. Reemplaza a gtklock, que se dibujaba con el tema GTK y no
+# con el del sistema.
+#
+# Antes de suspender va con -d, que devuelve el control apenas la pantalla quedó
+# cubierta; sin eso swayidle espera a que alguien desbloquee y la suspensión
+# nunca llega.
+#
+# El proceso se lanza en su propio ámbito con systemd-run: de otro modo vive
+# dentro del cgroup de esta unidad, y reiniciarla —cosa que hace Configuración
+# cada vez que se guarda la página de Energía— mataría un bloqueo activo. Un
+# cliente de bloqueo que muere con la sesión tomada deja al compositor
+# bloqueado y sin nada donde escribir la contraseña.
 [Unit]
 Description=Bloqueo por inactividad de VasakOS (swayidle)
 PartOf=graphical-session.target
@@ -16,7 +26,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/swayidle -w timeout 300 '/usr/bin/vasak-lock' before-sleep '/usr/bin/vasak-lock -d'
+ExecStart=/usr/bin/swayidle -w timeout 300 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen' before-sleep 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen -d'
 Restart=on-failure
 
 [Install]
