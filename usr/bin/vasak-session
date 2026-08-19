@@ -50,6 +50,15 @@ export _JAVA_AWT_WM_NONREPARENTING=1
 export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
 systemctl --user enable --now ssh-agent.socket >/dev/null 2>&1 || true
 
+# Y quién pregunta la frase: vasak-ssh-askpass la busca primero en el llavero,
+# que el inicio de sesión ya abrió, así que después de escribirla una vez no se
+# vuelve a preguntar. «prefer» hace que pregunte con el diálogo del sistema aun
+# cuando haya una terminal a mano, que es lo que corresponde en un escritorio.
+if [ -x /usr/bin/vasak-ssh-askpass ]; then
+    export SSH_ASKPASS=/usr/bin/vasak-ssh-askpass
+    export SSH_ASKPASS_REQUIRE=prefer
+fi
+
 # Launch Wayfire under uwsm so the whole graphical session is a proper systemd
 # user unit hierarchy: correct environment propagation (via `uwsm finalize` in
 # wayfire.ini), supervised graphical-session daemons, and clean teardown at
