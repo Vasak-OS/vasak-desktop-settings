@@ -42,6 +42,14 @@ export NIXOS_OZONE_WL=1
 export CLUTTER_BACKEND=wayland
 export _JAVA_AWT_WM_NONREPARENTING=1
 
+# El agente de claves SSH. Sin esto cada `git push` vuelve a pedir la frase de
+# la clave, porque no hay ningún agente y ssh no tiene dónde dejarla: el socket
+# lo levanta systemd (ssh-agent.socket) y la variable es la única forma de que
+# ssh lo encuentre. La clave se agrega sola la primera vez que se usa, por el
+# AddKeysToAgent que va en /etc/ssh/ssh_config.d/.
+export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+systemctl --user enable --now ssh-agent.socket >/dev/null 2>&1 || true
+
 # Launch Wayfire under uwsm so the whole graphical session is a proper systemd
 # user unit hierarchy: correct environment propagation (via `uwsm finalize` in
 # wayfire.ini), supervised graphical-session daemons, and clean teardown at
