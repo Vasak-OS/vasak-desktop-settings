@@ -1,5 +1,5 @@
 Package: vasak-desktop-settings
-Version: 0.4.3
+Version: 0.4.4
 Architecture: all
 Maintainer: Joaquin (Pato) Decima <jdecima@vasak.net.ar>
 Depends: xfwm4, dex, python3-yaml, vasakos-icon-theme
