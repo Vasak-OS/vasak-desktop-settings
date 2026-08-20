@@ -26,7 +26,16 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/swayidle -w timeout 300 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen' before-sleep 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen -d'
+# El primer timeout es para el fondo en movimiento: un video decodificando
+# detrás de la pantalla de bloqueo, durante horas, es el gasto más inútil que
+# tiene el escritorio, y desde adentro del webview no hay forma de saber que
+# nadie lo está mirando. Se pausa un rato antes de bloquear y se reanuda al
+# volver. Si el fondo es una imagen, los avisos no le hacen nada a nadie.
+ExecStart=/usr/bin/swayidle -w \
+    timeout 240 'dbus-send --session --dest=org.vasak.os.Desktop --type=method_call /org/vasak/os/Desktop org.vasak.os.Desktop.PauseWallpaper' \
+    resume 'dbus-send --session --dest=org.vasak.os.Desktop --type=method_call /org/vasak/os/Desktop org.vasak.os.Desktop.ResumeWallpaper' \
+    timeout 300 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen' \
+    before-sleep 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen -d'
 Restart=on-failure
 
 [Install]
