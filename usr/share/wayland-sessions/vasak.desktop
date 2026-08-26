@@ -2,4 +2,11 @@
 Name=Vasak OS
 Comment=Desktop for VasakOS
 Exec=/usr/bin/vasak-session
+# El nombre con el que la sesión se identifica. Sin esta clave, quien arranca la
+# sesión tiene que adivinarlo, y el greeter adivinaba «VasakOS» mientras
+# `vasak-session` exportaba «Vasak» — dos nombres para el mismo escritorio. De
+# ese valor dependen el archivo de configuración del portal, el filtrado de
+# `OnlyShowIn`/`NotShowIn` de los .desktop y la detección del tema en GTK y Qt,
+# así que con dos nombres la mitad del sistema no reconoce al otro.
+DesktopNames=Vasak;wlroots
 Icon=/usr/share/Vasak/vasak-desktop/icon.svg
