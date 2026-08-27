@@ -1,0 +1,15 @@
+# La configuración de zsh que trae VasakOS.
+#
+# Este archivo es del paquete: se actualiza con el escritorio y llega a todas las
+# cuentas, incluidas las que ya existían. Lo que la persona escriba en su
+# `~/.zshrc` corre **después** y por lo tanto gana.
+#
+# Por ahora está casi vacío a propósito. Lo que valía la pena de la versión
+# anterior no valía nada: un `plugins=(git command-not-found systemd)` que es
+# sintaxis de oh-my-zsh, que el sistema no instala ni carga, y un
+# `source /etc/profile.d/vte.sh` para tilix, que tampoco está. Lo importante de
+# este archivo es que exista: es el lugar donde las mejoras futuras del escritorio
+# van a llegar sin tocar el `.zshrc` de nadie.
+
+# Que la shell interactiva tenga el mismo entorno que el resto de la sesión.
+[ -r /usr/share/vasak/shell/profile ] && . /usr/share/vasak/shell/profile

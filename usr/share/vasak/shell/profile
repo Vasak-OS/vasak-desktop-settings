@@ -1,0 +1,22 @@
+# El entorno que trae VasakOS, para cualquier shell POSIX.
+#
+# Este archivo es del paquete: se actualiza con el escritorio y llega a todas las
+# cuentas, incluidas las que ya existían. Lo que la persona escriba en su
+# `~/.profile` corre **después** y por lo tanto gana.
+#
+# Sintaxis POSIX a secas: `.profile` lo lee cualquier shell, incluida dash, que no
+# conoce `source` ni los arreglos de bash.
+
+# El tema de los diálogos de Qt, para que las aplicaciones Qt no se vean ajenas.
+export QT_QPA_PLATFORMTHEME="qt6ct"
+
+# El editor de consola, para `git commit`, `visudo` y compañía.
+[ -x /usr/bin/nano ] && export EDITOR=/usr/bin/nano
+
+# NO se define TERM acá.
+#
+# TERM describe de qué es capaz el terminal, y lo pone el terminal: vasak-terminal
+# exporta `xterm-256color`. La versión anterior de este archivo ponía
+# `export TERM=tilix`, y tilix no está instalado ni tiene entrada en terminfo, así
+# que nano, htop y less quedaban sin poder dibujar en cualquier shell que leyera
+# `.profile`.
