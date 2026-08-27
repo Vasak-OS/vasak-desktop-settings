@@ -1,0 +1,29 @@
+# Con qué abre VasakOS cada tipo de archivo.
+#
+# Acá y no en `/etc/skel`: éste alcanza a **todas** las cuentas, incluidas las que
+# ya existían, y una versión nueva del paquete cambia el valor por omisión sin
+# migrar nada. El de `~/.config/mimeapps.list` es el archivo de la persona y le
+# gana a éste, que es como corresponde: lo que alguien eligió a mano no se toca.
+#
+# Sólo se declaran tipos que VasakOS **puede** abrir. Antes esto vivía en skel y
+# apuntaba a `gedit`, `evince` y `gthumb`, tres aplicaciones que el sistema no
+# instala: en una instalación nueva, abrir un PDF, un texto o una imagen no hacía
+# nada. Dejar un tipo sin declarar es mejor que declararlo con algo que no está,
+# porque así la búsqueda de XDG sigue y encuentra lo que la persona haya instalado.
+
+[Default Applications]
+inode/directory=vasak-file-manager.desktop
+image/png=vasak-gallery.desktop
+image/jpeg=vasak-gallery.desktop
+image/gif=vasak-gallery.desktop
+image/webp=vasak-gallery.desktop
+image/bmp=vasak-gallery.desktop
+image/tiff=vasak-gallery.desktop
+video/mp4=vasak-gallery.desktop
+video/webm=vasak-gallery.desktop
+video/x-matroska=vasak-gallery.desktop
+audio/mpeg=vasak-resonance.desktop
+audio/flac=vasak-resonance.desktop
+audio/ogg=vasak-resonance.desktop
+text/x-shellscript=vasak-terminal.desktop
+application/x-shellscript=vasak-terminal.desktop

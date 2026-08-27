@@ -59,6 +59,20 @@ if [ -x /usr/bin/vasak-ssh-askpass ]; then
     export SSH_ASKPASS_REQUIRE=prefer
 fi
 
+# Las opciones nuevas del paquete, para una cuenta que ya existía.
+#
+# `/etc/skel` sólo alcanza a las cuentas **nuevas**, así que sin esto una
+# actualización del escritorio no llega nunca a quien ya lo estaba usando: los
+# atajos nuevos, los plugins nuevos y los valores por omisión nuevos se quedan en
+# el paquete. Agrega lo que falta y **no toca** ningún valor que ya esté puesto, ni
+# vuelve a ofrecer lo que alguien borró a propósito.
+#
+# Va antes del compositor porque wayfire lee su configuración al arrancar, y con
+# `|| true` porque un problema acá no puede impedir que la sesión abra.
+if [ -x /usr/bin/vasak-config-migrate ]; then
+    /usr/bin/vasak-config-migrate || true
+fi
+
 # Launch Wayfire under uwsm so the whole graphical session is a proper systemd
 # user unit hierarchy: correct environment propagation (via `uwsm finalize` in
 # wayfire.ini), supervised graphical-session daemons, and clean teardown at
