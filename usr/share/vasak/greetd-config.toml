@@ -1,9 +1,14 @@
 # VasakOS greetd configuration (reference for INSTALLED systems).
 #
 # The `greetd` package owns /etc/greetd/config.toml, so this canonical config is
-# shipped here and must be copied to /etc/greetd/config.toml by the installer
-# (vasakos-calamares-config) or a post-install step to avoid a pacman file
-# conflict.
+# shipped here rather than at that path, to avoid a pacman file conflict.
+#
+# Copying it into place is not this package's job: `vasak-session-manager`'s
+# install hook owns that, and it ships its own reference at
+# /usr/share/vasak-session-manager/greetd.toml. That hook is the one that knows
+# when replacing the file is safe -- it leaves a config somebody wrote by hand
+# alone, and only overwrites what is missing, still greetd's `agreety` default,
+# or an autologin naming a user that does not exist.
 #
 # To auto-unlock the vasak keyring at login, also add to /etc/pam.d/greetd:
 #     auth       optional  pam_vasak_keyring.so
