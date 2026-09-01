@@ -1,0 +1,26 @@
+# Quién es este sistema, para todo lo que pregunte.
+#
+# `filesystem` de Arch trae /usr/lib/os-release y **no** /etc/os-release, así que
+# esta ruta está libre y no hay conflicto de archivos. Lo que se lee primero es
+# /etc/os-release, con /usr/lib/os-release como respaldo: por eso alcanza con
+# poner esto para que el sistema entero se identifique como VasakOS.
+#
+# Sin este archivo, un VasakOS instalado decía «Arch Linux» en `fastfetch`, en
+# los reportes de bugs y en el nombre que los navegadores informan.
+NAME="VasakOS Linux"
+PRETTY_NAME="VasakOS"
+
+# `ID` es el identificador propio y `ID_LIKE` con qué es compatible. En ese
+# orden: al revés —ID=arch, ID_LIKE=vasakos— dice «soy Arch y me parezco a
+# VasakOS», que es justo lo contrario. Es el mismo par que ya usa
+# /etc/lsb-release del paquete lsb-release.
+ID=vasakos
+ID_LIKE=arch
+
+BUILD_ID=rolling
+ANSI_COLOR="38;2;0;122;204"
+HOME_URL='https://os.vasak.net.ar/'
+DOCUMENTATION_URL='https://os.vasak.net.ar/docs'
+SUPPORT_URL='https://t.me/VasakOSLinux'
+BUG_REPORT_URL='https://github.com/Vasak-OS'
+LOGO=vasakos
