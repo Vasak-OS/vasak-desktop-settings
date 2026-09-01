@@ -1,0 +1,17 @@
+# Tapa la entrada que instala uwsm en /usr/share/applications.
+#
+# `uuctl` es un selector de unidades de systemd del usuario que viene con uwsm,
+# y uwsm está porque la sesión lo necesita: `vasak-session` lo ejecuta y
+# `wayfire.ini` lo llama para exportar el entorno. La herramienta, en cambio, no
+# es de VasakOS y acá ni siquiera funciona: necesita un menú tipo dmenu —fuzzel,
+# wofi, rofi, bemenu…— y no instalamos ninguno, así que hacerle clic no hacía
+# nada. Una entrada que no hace nada no va en el menú.
+#
+# No se puede reemplazar el archivo de uwsm —son dos paquetes—, así que se lo
+# tapa desde el directorio del usuario, que es el que manda según XDG.
+
+[Desktop Entry]
+Type=Application
+Name=uuctl
+Exec=uuctl
+NoDisplay=true
