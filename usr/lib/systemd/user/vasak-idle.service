@@ -38,5 +38,40 @@ ExecStart=/usr/bin/swayidle -w \
     before-sleep 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen -d'
 Restart=on-failure
 
+# El endurecimiento de acá es deliberadamente más liviano que el del resto de
+# los demonios, y la razón es la línea de arriba: el bloqueo se lanza con
+# `systemd-run --scope`, que cambia el cgroup pero **no** el espacio de nombres.
+# O sea que todo lo que se le ponga a esta unidad lo hereda además
+# `vasak-lock-screen`, que es una ventana Tauri. Una pantalla de bloqueo que no
+# dibuja te deja afuera de tu propia sesión, así que las restricciones que
+# podrían romperla no van:
+#
+#   - `PrivateDevices` le taparía /dev/dri al bloqueo y no habría con qué
+#     dibujar.
+#   - `MemoryDenyWriteExecute` mata a WebKit, que compila su JavaScript.
+#   - `RestrictNamespaces` le saca a WebKit su propio aislamiento.
+#
+# Lo que sí va es lo que un contador de inactividad no necesita para nada, y el
+# bloqueo tampoco: red, escribir en el sistema y ver el resto de los procesos.
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+PrivateTmp=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectProc=invisible
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+ProtectSystem=full
+
 [Install]
 WantedBy=graphical-session.target
