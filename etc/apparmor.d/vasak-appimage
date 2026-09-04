@@ -53,6 +53,17 @@
 # adicional. Un binario en /usr/bin necesitó root para llegar ahí; un AppImage
 # lo bajaste vos.
 
+# ── Comprobado ──────────────────────────────────────────────────────────────
+#
+# Contra un AppImage de verdad (una aplicación Tauri empaquetada), con el perfil
+# en enforce: arranca igual que sin perfil, queda etiquetado
+# «vasak-appimage (enforce)» y no registra un solo bloqueo. O sea que la lista
+# de clases de regla de abajo está completa — que es el riesgo de enforce.
+#
+# Y contra un AppImage de mentira que intenta abrir los dispositivos: cámara y
+# micrófono dan «Permiso denegado» con `apparmor="DENIED"` en el diario, y los
+# altavoces siguen accesibles.
+
 abi <abi/4.0>,
 
 include <tunables/global>
