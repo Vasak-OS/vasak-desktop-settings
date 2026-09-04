@@ -96,9 +96,43 @@ qué el llavero se salvó: su unidad tiene sandbox de systemd, pero es el único
 sin ventana… y también por qué el agente de permisos, que sí tiene ventana, no
 se cayó — no abre ninguna hasta que le piden un permiso.
 
-`diagnostico3.sh` bisecta las veinte directivas del sandbox de systemd con el
-perfil puesto, para encontrar cuál es la que choca. Si resulta ser una sola —y
-prescindible—, los cinco perfiles vuelven.
+Y no es una directiva suelta. Bisecando el sandbox de systemd con el perfil
+puesto:
+
+| Sandbox de systemd | ¿Se cae? |
+|---|---|
+| ninguno | **no** |
+| completo | sí |
+| sin `SystemCall*` | sí |
+| sin `PrivateDevices`/`BindPaths` | sí |
+| sin `RestrictAddressFamilies` | sí |
+| sin `NoNewPrivileges` | sí |
+
+Sacar cualquier grupo por separado no alcanza. Sólo desaparecen las caídas
+cuando no hay sandbox de systemd en absoluto.
+
+## Conclusión
+
+Para nuestros demonios con ventana, **AppArmor y el sandbox de systemd son
+excluyentes**, y de los dos conviene quedarse con el de systemd: está probado,
+es medible —`systemd-analyze security` bajó de 9.2 a 2.4 en cada uno— y no
+depende de que AppArmor esté activo.
+
+Eso **no** invalida AppArmor para lo que se lo quería. Las aplicaciones de
+terceros no se lanzan desde unidades de systemd: las abre el dock, el menú, otra
+aplicación o una terminal, sin ningún sandbox de systemd encima. Ahí AppArmor
+actúa solo, que es el caso que sí funciona —se comprobó lanzando el binario a
+mano con el perfil puesto: veinte segundos sin caerse—. Y era justamente el
+motivo por el que se lo eligió: es lo único que confina sin importar quién lanzó
+el programa.
+
+Así queda el reparto, y tiene sentido:
+
+| | Cómo se protege |
+|---|---|
+| Nuestros demonios con ventana | sandbox de systemd |
+| Nuestros demonios sin ventana (el llavero) | sandbox de systemd **y** AppArmor |
+| Aplicaciones de terceros | AppArmor |
 
 ## Cómo retomarlo
 
