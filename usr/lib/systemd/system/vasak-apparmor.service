@@ -17,17 +17,20 @@ After=systemd-journald-audit.socket
 After=var.mount var-cache.mount usr.mount usr-share.mount
 ConditionSecurity=apparmor
 
-# Qué NO se carga, y por qué:
+# Hoy carga uno solo: vasak-keyring.
 #
-#   · vasak-press-and-hold. Con su perfil puesto el proceso se cae en bucle
-#     —ocho volcados seguidos—, incluso en modo complain y sin una sola regla
-#     `deny`. Sin AppArmor corre sin problemas: se comprobó contra el arranque
-#     anterior, donde estuvo tres minutos y medio sin caerse. La causa todavía
-#     no se sabe; hace falta una build con símbolos para leer la traza.
+# Los otros cinco que se escribieron están en apparmor-borrador/ del
+# repositorio, sin instalarse, porque tumbaban el escritorio. La causa está
+# acotada y medida: se caen los binarios que levantan el proceso web de WebKit
+# —500, 262 y 250 volcados en un solo arranque—, y pasa con el perfil más vacío
+# posible en modo complain, así que no se arregla escribiendo mejores reglas.
+# WebKit se aísla a sí mismo con bubblewrap y espacios de nombres, y ese
+# aislamiento no parece sobrevivir a estar confinado.
 #
-#     De todos los binarios nuestros es el peor para dejar rompiéndose: toma el
-#     teclado en exclusiva, así que un bucle de caídas deja al equipo tecleando
-#     mal. Vuelve cuando se sepa por qué, no antes.
+# El llavero es la excepción, y por eso está: no tiene interfaz. En el arranque
+# donde los demás se caían a cientos, él corrió confinado y etiquetado
+# «vasak-keyring (complain)» sin una sola caída. Y es el que guarda todas las
+# contraseñas de la sesión, así que es también el que más rinde confinar.
 
 [Service]
 Type=oneshot

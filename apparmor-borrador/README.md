@@ -1,6 +1,8 @@
-# Perfiles de AppArmor — intento fallido, guardado para el próximo
+# Perfiles de AppArmor — los que no se pudieron poner
 
-Estos cinco perfiles **no se instalan**. Están acá porque el trabajo sirve y
+Estos cuatro perfiles **no se instalan**. El quinto, el del llavero, sí: es el
+único que no levanta una ventana WebKit y corrió confinado sin una sola caída,
+así que volvió a `etc/apparmor.d/`. Están acá porque el trabajo sirve y
 las conclusiones más todavía, pero puestos en `/etc/apparmor.d/` tumban el
 escritorio.
 

@@ -67,8 +67,20 @@ profile vasak-keyring /usr/bin/vasak-keyring flags=(complain) {
 
   # El diálogo para desbloquear. Se intenta primero por systemd-run —para que
   # viva fuera de este cgroup— y si eso falla se lanza directo.
+  #
+  # Va `Ux` —sin confinar— y no `Px`, a propósito: el diálogo es una ventana
+  # Tauri, y AppArmor tumba nuestras ventanas Tauri. Está medido: los tres
+  # binarios que levantan el proceso web de WebKit acumularon 500, 262 y 250
+  # volcados en un solo arranque, y pasa con el perfil más vacío posible en
+  # complain, así que no es cuestión de escribir mejor las reglas. Ver
+  # apparmor-borrador/README.md.
+  #
+  # Confinar el diálogo sería dejarte sin forma de desbloquear el llavero, que
+  # es peor que no confinarlo. La `U` mayúscula limpia las variables de entorno
+  # peligrosas —LD_PRELOAD y compañía— sin tocar las que el diálogo necesita
+  # para dibujarse.
   /usr/bin/systemd-run rCx -> systemd_run,
-  /usr/bin/vasak-keyring-prompt Px,
+  /usr/bin/vasak-keyring-prompt Ux,
 
   # Sitio para agregados locales sin tocar el paquete.
   include if exists <local/vasak-keyring>
@@ -77,6 +89,7 @@ profile vasak-keyring /usr/bin/vasak-keyring flags=(complain) {
     include <abstractions/base>
     include <abstractions/dbus-session-strict>
     /usr/bin/systemd-run mr,
-    /usr/bin/vasak-keyring-prompt Px,
+    # Sin confinar, por lo mismo que arriba.
+    /usr/bin/vasak-keyring-prompt Ux,
   }
 }
