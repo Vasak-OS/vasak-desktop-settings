@@ -1,0 +1,49 @@
+# El selector de acentos: lee el teclado para saber que mantenés una tecla.
+#
+# En modo `complain`: registra lo que bloquearía, no bloquea nada. Este es el
+# perfil que más importa de todos —el proceso lee el teclado entero, tecla por
+# tecla— y por eso mismo es el que menos conviene apurar a enforce sin datos.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile vasak-press-and-hold /usr/bin/vasak-press-and-hold flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/dbus-session-strict>
+  include <abstractions/wayland>
+  include <abstractions/mesa>
+  include <abstractions/dri-common>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+
+  # La interfaz es una ventana Tauri, o sea WebKit: usa espacios de nombres
+  # para su propio aislamiento y lanza sus procesos auxiliares. Se quedan
+  # dentro de este perfil (`ix`) en vez de darles uno propio, que sería más
+  # trabajo del que rinde para procesos que ya no ven más que su padre.
+  userns,
+  /usr/lib/webkit2gtk-4.1/** ix,
+  /usr/lib/webkitgtk-6.0/** ix,
+  owner /run/user/@{uid}/webkitgtk/** rw,
+  owner /dev/shm/** rw,
+
+  # Lo que lee no tiene por dónde irse.
+  deny network,
+
+  /usr/bin/vasak-press-and-hold mr,
+
+  # El teclado, para leerlo; uinput, para devolver la letra elegida.
+  /dev/input/ r,
+  /dev/input/event* rw,
+  /dev/uinput rw,
+  /sys/devices/**/input*/** r,
+  /run/udev/data/** r,
+
+  # Ni la cámara ni el micrófono: no los usa, y dejarlo escrito hace que se
+  # note si algún día empieza a pedirlos.
+  deny /dev/video* rw,
+
+  include if exists <local/vasak-press-and-hold>
+}

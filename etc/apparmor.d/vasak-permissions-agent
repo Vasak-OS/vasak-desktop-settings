@@ -1,0 +1,46 @@
+# El diálogo que otorga permisos: cámara, micrófono, pantalla, cuentas.
+#
+# En modo `complain`: registra lo que bloquearía, no bloquea nada.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile vasak-permissions-agent /usr/bin/vasak-permissions-agent flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/dbus-session-strict>
+  include <abstractions/wayland>
+  include <abstractions/mesa>
+  include <abstractions/dri-common>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+
+  # La interfaz es una ventana Tauri, o sea WebKit: usa espacios de nombres
+  # para su propio aislamiento y lanza sus procesos auxiliares. Se quedan
+  # dentro de este perfil (`ix`) en vez de darles uno propio, que sería más
+  # trabajo del que rinde para procesos que ya no ven más que su padre.
+  userns,
+  /usr/lib/webkit2gtk-4.1/** ix,
+  /usr/lib/webkitgtk-6.0/** ix,
+  owner /run/user/@{uid}/webkitgtk/** rw,
+  owner /dev/shm/** rw,
+  # El servicio de permisos corre como root en el bus del sistema.
+  include <abstractions/dbus-strict>
+
+  deny network,
+
+  # Que el proceso que te pregunta por la cámara no pueda abrir la cámara.
+  deny /dev/video* rw,
+
+  /usr/bin/vasak-permissions-agent mr,
+
+  # Lee los .desktop para poder decirte el nombre de la aplicación que pide.
+  /usr/share/applications/ r,
+  /usr/share/applications/** r,
+  owner @{HOME}/.local/share/applications/ r,
+  owner @{HOME}/.local/share/applications/** r,
+
+  include if exists <local/vasak-permissions-agent>
+}

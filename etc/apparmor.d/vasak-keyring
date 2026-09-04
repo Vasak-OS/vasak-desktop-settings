@@ -1,0 +1,67 @@
+# Perfil de AppArmor del llavero de VasakOS.
+#
+# ── Por qué está en modo `complain` ─────────────────────────────────────────
+#
+# `flags=(complain)` significa: registrar todo lo que *se bloquearía*, y no
+# bloquear nada. Es a propósito y no es un paso a medias.
+#
+# Un perfil de AppArmor sólo se puede escribir bien mirando lo que el programa
+# pide de verdad, y eso no se adivina leyendo el código: hay bibliotecas,
+# locales, /proc y /sys de por medio. El camino previsto por AppArmor es
+# arrancar en `complain`, dejar que el programa se use un tiempo, y apretar el
+# perfil con `aa-logprof` a partir de lo que quedó en el registro.
+#
+# Además hay una razón concreta: un perfil equivocado rompe la aplicación, y ya
+# nos pasó una vez con el endurecimiento de systemd —la pantalla de bloqueo
+# rechazaba la contraseña correcta—. En `complain` eso es imposible por
+# construcción.
+#
+# Para pasarlo a enforce, se saca `flags=(complain)`. No antes de mirar el
+# registro.
+#
+# ── Qué se le permite ───────────────────────────────────────────────────────
+#
+# Este proceso guarda todas las contraseñas de la sesión: es el backend de
+# `org.freedesktop.secrets`. Lo que necesita es leer y escribir un archivo,
+# atender D-Bus, y abrir su socket de desbloqueo en /run/user.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile vasak-keyring /usr/bin/vasak-keyring flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/dbus-session-strict>
+
+  # Nada de red. Es la regla que más vale acá: sin sockets de red, una falla en
+  # este proceso no tiene por dónde mandar los secretos afuera.
+  deny network,
+
+  /usr/bin/vasak-keyring mr,
+
+  # La base con los secretos. `k` es el bloqueo de archivo.
+  owner @{HOME}/.local/share/vasak-keyring/ rw,
+  owner @{HOME}/.local/share/vasak-keyring/** rwkl,
+
+  # El socket por el que el módulo de PAM le pasa la contraseña del inicio de
+  # sesión. Va en /run/user y no en XDG_RUNTIME_DIR: el módulo corre antes de
+  # que esa variable exista.
+  owner /run/user/@{uid}/vasak-keyring/ rw,
+  owner /run/user/@{uid}/vasak-keyring/** rw,
+
+  # El diálogo para desbloquear. Se intenta primero por systemd-run —para que
+  # viva fuera de este cgroup— y si eso falla se lanza directo.
+  /usr/bin/systemd-run rCx -> systemd_run,
+  /usr/bin/vasak-keyring-prompt Px,
+
+  # Sitio para agregados locales sin tocar el paquete.
+  include if exists <local/vasak-keyring>
+
+  profile systemd_run {
+    include <abstractions/base>
+    include <abstractions/dbus-session-strict>
+    /usr/bin/systemd-run mr,
+    /usr/bin/vasak-keyring-prompt Px,
+  }
+}

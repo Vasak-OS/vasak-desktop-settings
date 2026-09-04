@@ -1,0 +1,36 @@
+[Unit]
+Description=Cargar los perfiles de AppArmor de VasakOS
+Documentation=https://github.com/Vasak-OS/vasak-desktop-settings
+
+# Sólo los nuestros, y no `apparmor.service`, que carga todo /etc/apparmor.d/.
+# El paquete `apparmor` trae 145 perfiles de terceros —78 son «de nombre» y no
+# confinan nada, pero 65 sí: ping, plasmashell, samba, nvidia_modprobe…—.
+# Cargarlos a todos de golpe es una decisión aparte, con su propia prueba;
+# mezclarla con estrenar los nuestros haría imposible saber qué rompió qué.
+#
+# `ConditionSecurity=apparmor` hace que la unidad se saltee sola cuando AppArmor
+# no está activo, en vez de fallar. Eso pasa si alguien arranca sin el `lsm=` de
+# la línea de arranque, y no es un error: es un sistema sin AppArmor.
+DefaultDependencies=no
+Before=sysinit.target
+After=systemd-journald-audit.socket
+After=var.mount var-cache.mount usr.mount usr-share.mount
+ConditionSecurity=apparmor
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# El `set --` con el glob antes de llamar al parser es para no pasarle el
+# patrón crudo si algún día no hay ningún perfil: ahí no hay nada que cargar y
+# se sale bien, en vez de fallar por un archivo llamado «vasak-*».
+ExecStart=/bin/sh -c 'set -- /etc/apparmor.d/vasak-*; [ -e "$1" ] || exit 0; exec /usr/bin/apparmor_parser --replace "$@"'
+ExecReload=/bin/sh -c 'set -- /etc/apparmor.d/vasak-*; [ -e "$1" ] || exit 0; exec /usr/bin/apparmor_parser --replace "$@"'
+
+# Igual que en `apparmor.service` del sistema, y por la misma razón: systemd
+# traduce «restart» a «stop; start», y un stop de verdad sacaría el
+# confinamiento de los procesos que ya están corriendo sin poder volver a
+# ponérselo. Mejor que el stop no haga nada.
+ExecStop=/bin/true
+
+[Install]
+WantedBy=multi-user.target

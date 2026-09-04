@@ -1,0 +1,46 @@
+# El daemon de notificaciones: dibuja los globos y guarda el historial.
+#
+# En modo `complain`: registra lo que bloquearía, no bloquea nada.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile vasak-flare-daemon /usr/bin/vasak-flare-daemon flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/dbus-session-strict>
+  include <abstractions/wayland>
+  include <abstractions/mesa>
+  include <abstractions/dri-common>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+
+  # La interfaz es una ventana Tauri, o sea WebKit: usa espacios de nombres
+  # para su propio aislamiento y lanza sus procesos auxiliares. Se quedan
+  # dentro de este perfil (`ix`) en vez de darles uno propio, que sería más
+  # trabajo del que rinde para procesos que ya no ven más que su padre.
+  userns,
+  /usr/lib/webkit2gtk-4.1/** ix,
+  /usr/lib/webkitgtk-6.0/** ix,
+  owner /run/user/@{uid}/webkitgtk/** rw,
+  owner /dev/shm/** rw,
+
+  # Las notificaciones llegan por D-Bus y el historial es un archivo. Nada de
+  # esto sale a internet — y por acá pasan códigos de verificación.
+  deny network,
+
+  /usr/bin/vasak-flare-daemon mr,
+
+  # El historial.
+  owner @{HOME}/.local/share/vasak-flare-daemon/ rw,
+  owner @{HOME}/.local/share/vasak-flare-daemon/** rwkl,
+
+  # Los iconos que las aplicaciones piden mostrar en la notificación.
+  /usr/share/icons/** r,
+  /usr/share/pixmaps/** r,
+  owner @{HOME}/.local/share/icons/** r,
+
+  include if exists <local/vasak-flare-daemon>
+}

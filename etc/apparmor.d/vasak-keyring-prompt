@@ -1,0 +1,40 @@
+# El diálogo que pide la contraseña para desbloquear el llavero.
+#
+# En modo `complain`: registra lo que bloquearía, no bloquea nada. Ver
+# /etc/apparmor.d/vasak-keyring para por qué se arranca así.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile vasak-keyring-prompt /usr/bin/vasak-keyring-prompt flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/dbus-session-strict>
+  include <abstractions/wayland>
+  include <abstractions/mesa>
+  include <abstractions/dri-common>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+
+  # La interfaz es una ventana Tauri, o sea WebKit: usa espacios de nombres
+  # para su propio aislamiento y lanza sus procesos auxiliares. Se quedan
+  # dentro de este perfil (`ix`) en vez de darles uno propio, que sería más
+  # trabajo del que rinde para procesos que ya no ven más que su padre.
+  userns,
+  /usr/lib/webkit2gtk-4.1/** ix,
+  /usr/lib/webkitgtk-6.0/** ix,
+  owner /run/user/@{uid}/webkitgtk/** rw,
+  owner /dev/shm/** rw,
+
+  # Le escribís una contraseña: no tiene por qué poder mandarla a ningún lado.
+  deny network,
+
+  /usr/bin/vasak-keyring-prompt mr,
+
+  # Habla con el llavero por su socket.
+  owner /run/user/@{uid}/vasak-keyring/** rw,
+
+  include if exists <local/vasak-keyring-prompt>
+}
