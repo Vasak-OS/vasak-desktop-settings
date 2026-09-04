@@ -76,16 +76,29 @@ Y los volcados de ese arranque acotan más todavía:
 | `vasak-permissions-agent` | 0 | es WebKit, pero no abre ventana hasta que le piden un permiso |
 | `vasak-keyring` | 0 | no tiene interfaz |
 
-Los que se caen son exactamente los que arrancan el proceso web. WebKit se
-aísla a sí mismo con bubblewrap y espacios de nombres, y la hipótesis es que ese
-aislamiento no sobrevive a estar confinado por AppArmor. `diagnostico2.sh` la
-pone a prueba.
+Eso llevó a sospechar de WebKit, que se aísla a sí mismo con bubblewrap y
+espacios de nombres. **`diagnostico2.sh` descartó esa hipótesis**: con el perfil
+mínimo puesto y el binario lanzado a mano desde una terminal, aguanta los 20
+segundos sin caerse, con el sandbox de WebKit encendido *y* apagado.
 
-Si se confirma, la conclusión de fondo es incómoda pero clara: para nuestras
-ventanas Tauri, AppArmor **saca** un aislamiento (el de WebKit) para poner otro,
-y no es un buen negocio. Tendría sentido reservarlo para los binarios sin
-interfaz —`vasak-keyring` corrió confinado sin una sola caída— y para las
-aplicaciones de terceros.
+## La causa real: los dos aislamientos juntos
+
+Poniendo las tres mediciones una al lado de la otra:
+
+| | ¿Se cae? |
+|---|---|
+| sin perfil de AppArmor, lanzado por systemd con su sandbox | no |
+| con perfil de AppArmor, lanzado a mano sin sandbox | no |
+| **con perfil de AppArmor, lanzado por systemd con su sandbox** | **sí, en bucle** |
+
+Ninguno de los dos aislamientos rompe solo. Rompen **juntos**. Y eso explica por
+qué el llavero se salvó: su unidad tiene sandbox de systemd, pero es el único
+sin ventana… y también por qué el agente de permisos, que sí tiene ventana, no
+se cayó — no abre ninguna hasta que le piden un permiso.
+
+`diagnostico3.sh` bisecta las veinte directivas del sandbox de systemd con el
+perfil puesto, para encontrar cuál es la que choca. Si resulta ser una sola —y
+prescindible—, los cinco perfiles vuelven.
 
 ## Cómo retomarlo
 
