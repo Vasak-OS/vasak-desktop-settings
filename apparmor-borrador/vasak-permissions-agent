@@ -29,8 +29,8 @@ profile vasak-permissions-agent /usr/bin/vasak-permissions-agent flags=(complain
   # El servicio de permisos corre como root en el bus del sistema.
   include <abstractions/dbus-strict>
 
-  # ⚠ Acá NO van reglas `deny`: se aplican también en modo complain y son
-  # silenciosas. Ver la explicación entera en /etc/apparmor.d/vasak-keyring.
+  # Acá no van reglas `deny`: en modo complain no se aplican —se registran como
+  # ALLOWED y el acceso pasa igual—. Ver /etc/apparmor.d/vasak-keyring.
 
   /usr/bin/vasak-permissions-agent mr,
 

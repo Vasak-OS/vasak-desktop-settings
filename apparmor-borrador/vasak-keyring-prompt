@@ -28,8 +28,8 @@ profile vasak-keyring-prompt /usr/bin/vasak-keyring-prompt flags=(complain) {
   owner /run/user/@{uid}/webkitgtk/** rw,
   owner /dev/shm/** rw,
 
-  # ⚠ Acá NO van reglas `deny`: se aplican también en modo complain y son
-  # silenciosas. Ver la explicación entera en /etc/apparmor.d/vasak-keyring.
+  # Acá no van reglas `deny`: en modo complain no se aplican —se registran como
+  # ALLOWED y el acceso pasa igual—. Ver /etc/apparmor.d/vasak-keyring.
 
   /usr/bin/vasak-keyring-prompt mr,
 

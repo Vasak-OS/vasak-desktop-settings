@@ -2,20 +2,30 @@
 #
 # ── Qué confina, y qué no ───────────────────────────────────────────────────
 #
-# `flags=(complain)` con reglas `deny` puntuales es una combinación deliberada,
-# no un descuido. En AppArmor las reglas `deny` se aplican **también** en modo
-# complain —complain sólo afecta a lo que el perfil no permite, no a lo que
-# prohíbe—. O sea que esto se lee como: «no restrinjas nada de esta aplicación,
-# salvo exactamente estas dos cosas».
+# El perfil permite **todo** explícitamente y niega dos cosas. Suena raro en un
+# perfil de seguridad, pero es la forma de escribir «no restrinjas nada de esta
+# aplicación salvo exactamente esto»: en AppArmor una regla `deny` le gana a
+# cualquier permiso.
 #
-# Es lo que hace falta acá. Un perfil completo para una aplicación que no
-# escribimos nosotros es imposible de mantener: no sabemos qué archivos toca ni
+# Es lo único mantenible acá. Un perfil completo para una aplicación que no
+# escribimos nosotros es imposible de sostener: no sabemos qué archivos toca ni
 # qué va a tocar tras actualizarse. Pero sí sabemos qué **no** queremos que
 # haga.
 #
-# Van con `audit` para que cada intento quede en el diario. Eso no es cosmético:
-# es de donde va a salir el aviso «esta aplicación quiso usar la cámara,
-# ¿se lo permitimos?».
+# Va en enforce y no en complain, y eso se aprendió midiendo: en modo complain
+# las reglas `deny` **no** se aplican. Se registran —el diario dice
+# `apparmor="ALLOWED"` con el nombre del dispositivo— y se permiten igual. Un
+# perfil como éste en complain no bloquea nada; sólo cuenta lo que habría
+# bloqueado.
+#
+# Por eso están listadas todas las clases de regla que AppArmor media (`file`,
+# `network`, `unix`, `dbus`, `mount`…): en enforce, lo que el perfil no nombra
+# queda prohibido, y olvidarse una rompería la aplicación. Falta `rlimit` a
+# propósito: esa clase sólo fija límites, no restringe.
+#
+# Las negaciones van con `audit` para que cada intento quede en el diario. Eso
+# no es cosmético: es de donde va a salir el aviso «esta aplicación quiso usar
+# la cámara, ¿se lo permitimos?».
 #
 # ── Por qué sólo la vía directa ─────────────────────────────────────────────
 #
@@ -47,17 +57,16 @@ abi <abi/4.0>,
 
 include <tunables/global>
 
-profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage flags=(complain) {
+profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage {
   # Todo permitido, explícitamente. Suena raro en un perfil de seguridad, pero
   # es la forma de escribir «no restrinjas nada salvo lo de abajo»: en AppArmor
   # una regla `deny` le gana a cualquier permiso, así que las dos negaciones
   # siguen valiendo.
   #
-  # Y hace falta por dos razones concretas. Una, el parser aborta con un perfil
-  # que sólo tiene negaciones —se queda sin estados que compilar—. Dos, sin
-  # permisos explícitos el modo complain anota **cada** acceso de la aplicación
-  # al diario, y eso ya nos llenó el journal una vez; así sólo quedan
-  # registrados los dos intentos que nos importan.
+  # Y hace falta por dos razones concretas. Una, en enforce lo que no se nombra
+  # queda prohibido, así que faltar una clase rompería la aplicación. Dos, el
+  # parser aborta con un perfil que sólo tiene negaciones: se queda sin estados
+  # que compilar.
   file,
   network,
   unix,
@@ -68,6 +77,9 @@ profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage flags=(complain) {
   mount,
   umount,
   pivot_root,
+  change_profile,
+  io_uring,
+  mqueue,
   # Sin esto no arrancan los que se aíslan a sí mismos —los de Electron, sobre
   # todo—, que montan su propio espacio de nombres.
   userns,

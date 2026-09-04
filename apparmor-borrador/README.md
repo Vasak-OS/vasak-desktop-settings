@@ -27,13 +27,15 @@ AppArmor activo, no tuvieron una sola caída.
 
 ## Lo que sí quedó aprendido
 
-1. **Las reglas `deny` se aplican también en modo complain**, y son
-   silenciosas: no se auditan salvo que se escriba `audit deny`. Un
-   `deny network,` —que además alcanza a AF_UNIX— impedía el socketpair que
-   tokio crea para las señales y el socket de Wayland, y los procesos morían
-   con «failed to create UnixStream: Permission denied» sin una sola línea de
-   AppArmor en el diario. Ese error ya está corregido en estos archivos: no
-   queda ninguna regla `deny`.
+1. **Las reglas `deny` NO se aplican en modo complain.** Se llegó a creer lo
+   contrario y quedó escrito un rato; medirlo lo desmintió: con un perfil en
+   complain y un `audit deny` sobre `/dev/video*`, el diario anota
+   `apparmor="ALLOWED"` y el dispositivo se abre igual. Complain permite todo y
+   sólo cuenta lo que habría bloqueado. Para negar de verdad hay que pasar a
+   enforce, y entonces hay que nombrar todas las clases de regla que la
+   aplicación usa —`file`, `network`, `unix`, `dbus`, `mount`…— porque lo que el
+   perfil no nombra queda prohibido. Hay un ejemplo en
+   `etc/apparmor.d/vasak-appimage`.
 
 2. **Y aun sin `deny`, siguen cayéndose.** Ésta es la parte sin resolver.
    Complain no debería bloquear nada, y el registro sólo muestra accesos
