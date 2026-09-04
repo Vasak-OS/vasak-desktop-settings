@@ -1,0 +1,84 @@
+# Perfil base para los AppImage: sin cámara ni micrófono por la vía directa.
+#
+# ── Qué confina, y qué no ───────────────────────────────────────────────────
+#
+# `flags=(complain)` con reglas `deny` puntuales es una combinación deliberada,
+# no un descuido. En AppArmor las reglas `deny` se aplican **también** en modo
+# complain —complain sólo afecta a lo que el perfil no permite, no a lo que
+# prohíbe—. O sea que esto se lee como: «no restrinjas nada de esta aplicación,
+# salvo exactamente estas dos cosas».
+#
+# Es lo que hace falta acá. Un perfil completo para una aplicación que no
+# escribimos nosotros es imposible de mantener: no sabemos qué archivos toca ni
+# qué va a tocar tras actualizarse. Pero sí sabemos qué **no** queremos que
+# haga.
+#
+# Van con `audit` para que cada intento quede en el diario. Eso no es cosmético:
+# es de donde va a salir el aviso «esta aplicación quiso usar la cámara,
+# ¿se lo permitimos?».
+#
+# ── Por qué sólo la vía directa ─────────────────────────────────────────────
+#
+# En este sistema la cámara y el micrófono los reparte PipeWire: la cámara
+# aparece como nodo v4l2 suyo, y una aplicación moderna nunca abre /dev/video0
+# —le habla al socket de PipeWire—. Ese socket no se puede negar acá sin dejar
+# a la aplicación además sin sonido, porque por el mismo socket va la
+# reproducción.
+#
+# Lo que sí cierra este perfil es la vía de atrás: la aplicación que se saltea
+# PipeWire y abre el dispositivo directamente. Hoy esa vía no tiene ningún
+# control, así que el perfil es una mejora real aunque parcial.
+#
+# Cerrar la vía de PipeWire necesita otra pieza: un segundo socket con permisos
+# restringidos —`sockets` en libpipewire-module-protocol-native y
+# `access.socket` en libpipewire-module-access—, negando acá el normal y
+# permitiendo el restringido. Eso queda pendiente porque un cliente restringido
+# se queda esperando a que alguien le conceda permisos, y ese alguien todavía no
+# existe.
+#
+# ── A qué se engancha ───────────────────────────────────────────────────────
+#
+# A los AppImage del directorio del usuario, que es el caso que la política de
+# la distro marca como no verificado: pacman es lo oficial, el AppImage es lo
+# adicional. Un binario en /usr/bin necesitó root para llegar ahí; un AppImage
+# lo bajaste vos.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage flags=(complain) {
+  # Todo permitido, explícitamente. Suena raro en un perfil de seguridad, pero
+  # es la forma de escribir «no restrinjas nada salvo lo de abajo»: en AppArmor
+  # una regla `deny` le gana a cualquier permiso, así que las dos negaciones
+  # siguen valiendo.
+  #
+  # Y hace falta por dos razones concretas. Una, el parser aborta con un perfil
+  # que sólo tiene negaciones —se queda sin estados que compilar—. Dos, sin
+  # permisos explícitos el modo complain anota **cada** acceso de la aplicación
+  # al diario, y eso ya nos llenó el journal una vez; así sólo quedan
+  # registrados los dos intentos que nos importan.
+  file,
+  network,
+  unix,
+  signal,
+  ptrace,
+  dbus,
+  capability,
+  mount,
+  umount,
+  pivot_root,
+  # Sin esto no arrancan los que se aíslan a sí mismos —los de Electron, sobre
+  # todo—, que montan su propio espacio de nombres.
+  userns,
+
+  # La cámara, por la vía directa.
+  audit deny /dev/video* rwk,
+
+  # El micrófono, por la vía directa. Sólo los dispositivos de **captura**: en
+  # ALSA terminan en `c` (pcmC0D0c) y los de reproducción en `p`. Negar
+  # /dev/snd/* entero dejaría a la aplicación muda, que no es lo que se decidió.
+  audit deny /dev/snd/pcmC*D*c rwk,
+
+  include if exists <local/vasak-appimage>
+}
