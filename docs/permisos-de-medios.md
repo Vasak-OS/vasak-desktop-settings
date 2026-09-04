@@ -62,9 +62,50 @@ objeto, más `access.rules` que se lo asigne a los clientes según su
     access.rules = [ ... ]   -- fija access, default_permissions o
                              -- permission_manager_name sobre el cliente
 
-El hueco es el esquema de las reglas de adentro del gestor —las que deciden qué
-permiso va sobre qué objeto—. `WpPermissionManager` es API nueva de WirePlumber
-0.5.17; el `NEWS.rst` la anuncia pero no documenta la configuración, y no hay
-ejemplos instalados. Hay que buscarlo upstream antes de escribir nada: adivinar
-el esquema y probarlo contra la pila de audio del equipo es exactamente cómo se
-llega a un sistema mudo.
+### El esquema, encontrado
+
+No hizo falta buscar upstream: está en la biblioteca y en un encabezado
+instalado.
+
+- `libwireplumber-0.5.so` nombra la acción de las reglas: **`set-permissions`**,
+  junto a `matches` y `actions`, y valida la cadena de permisos
+  («Permissions '%s' are not valid»).
+- `/usr/include/pipewire-0.3/pipewire/permission.h` da las banderas: **R** (ver
+  el objeto), **W** (modificarlo), **X** (llamarle métodos), **M** (ponerle
+  metadatos) y **L** (enlazar). Son cinco, que coincide con el `%c%c%c%c%c` del
+  registro de WirePlumber.
+
+Con eso la forma queda:
+
+    access.permission-managers = [
+      {
+        name = "vasak-sin-video"
+        default_permissions = "rwxml"
+        rules = [
+          { matches = [ { media.class = "~Video.*" } ]
+            actions = { set-permissions = "-----" } }
+        ]
+      }
+    ]
+
+    access.rules = [
+      { matches = [ { pipewire.sec.socket = "pipewire-0" } ]
+        actions = { update-props = { permission_manager_name = "vasak-sin-video" } } }
+    ]
+
+**Falta validarlo.** Un primer intento pareció funcionar y no probaba nada: ver
+abajo.
+
+## Cómo medir esto sin engañarse
+
+WirePlumber tarda en volver a enumerar los dispositivos después de reiniciarse.
+Si se mide enseguida, se ve un conjunto reducido de nodos **que no tiene nada
+que ver con los permisos aplicados**.
+
+Pasó: una prueba mostró que el cliente restringido pasaba de ver cinco clases de
+objetos a una sola, y parecía un éxito rotundo. La línea base sin ninguna
+configuración daba exactamente lo mismo.
+
+Toda medición tiene que esperar a que el conjunto de dispositivos esté completo
+—los de audio **y** los de video— antes de contar nada, y compararse contra una
+línea base tomada con la misma espera.
