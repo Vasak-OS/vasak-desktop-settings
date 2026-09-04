@@ -93,34 +93,46 @@ Con eso la forma queda:
         actions = { update-props = { permission_manager_name = "vasak-sin-video" } } }
     ]
 
-### Probado: la maquinaria corre, pero el permiso no se aplica
+### La sintaxis, confirmada contra el código
 
-Con la medición hecha bien —esperando a que el conjunto de dispositivos esté
-completo— la configuración de arriba **no cambia nada**: el cliente ve
-exactamente los mismos objetos que sin ella.
+Leído `lib/wp/permission-manager.c` de WirePlumber (el del tag 0.5.17 es
+**idéntico** a master, así que no hay diferencia de versión):
 
-Pero no es que no empareje. El registro del subsistema
-(`WIREPLUMBER_DEBUG=s-client:4`) muestra la cadena entera funcionando:
+- La acción de las reglas es **`set-permissions`**; cualquier otro nombre da
+  «Action name '%s' is not valid».
+- La cadena de permisos acepta los caracteres `r w x m l`, el `-` se **ignora**,
+  y existe la palabra especial `"all"`. O sea que `"-----"` es válida y equivale
+  a permisos **cero**.
+- `get_rules_matched_object_permissions` empareja las reglas contra las
+  propiedades **globales** del objeto y, si es un objeto PipeWire, también
+  contra las suyas.
+- Si varias reglas emparejan, los permisos se acumulan con OR.
 
-    Found config 'vasak-sin-video' PM for client 'pw-dump'
-    Attached newly activated permission manager to client 'pw-dump'
+O sea que la configuración escrita más arriba es sintácticamente correcta.
 
-O sea: la regla de `access.rules` empareja, el gestor se encuentra por nombre y
-se adjunta al cliente. Y WirePlumber **nunca se queja** de la cadena de
-permisos, así que `"rwxml"` y `"-----"` le parecen válidas.
+### Dónde se corta
 
-Lo que no ocurre es el efecto: el cliente conserva los nodos de video.
+No se aplica igual, y el punto está identificado. `update_client_permissions`
+—la única función que empuja los permisos al cliente— **no se llega a ejecutar**:
+su mensaje de registro («Updating permissions on client %u: any=… len=…») no
+aparece nunca, ni con el registro de WirePlumber en nivel info.
 
-El hueco que queda es entonces mucho más chico que al principio, y está adentro
-del gestor: **cómo se escriben sus `rules` para que un objeto pierda permisos**.
-Las candidatas son que `matches` sobre los objetos no use `media.class`, que
-`set-permissions` espere otro formato de cadena, o que `default_permissions`
-tenga precedencia sobre las reglas.
+Esa función tiene dos guardas al principio: que el gestor tenga activa la
+característica `WP_PERMISSION_MANAGER_LOADED`, y que el proxy del cliente siga
+siendo válido. Y sin embargo el registro del subsistema de acceso sí dice
+«Attached newly activated permission manager to client», o sea que desde el otro
+lado el gestor figura como activado.
 
-Conviene resolverlo mirando el código de WirePlumber 0.5.17
-(`lib/wp/permission-manager.c`, `get_rules_matched_object_permissions`) y no a
-fuerza de prueba y error: cada intento cuesta un reinicio de la pila de audio
-del equipo.
+Hipótesis pendientes, en orden de probabilidad:
+
+1. El gestor creado desde configuración no llega a activarse de verdad, pese al
+   mensaje. Sería un fallo de WirePlumber y correspondería reportarlo.
+2. `config.permission_managers:parse(2)` de `find-config-access.lua` deja el
+   campo `rules` en una forma que `Json.Raw` no reconstruye igual, y las reglas
+   llegan vacías al gestor.
+
+Lo que **no** es: ni la sintaxis de la acción, ni la cadena de permisos, ni el
+nombre de las propiedades — todo eso está verificado contra el código.
 
 ## Cómo medir esto sin engañarse
 
