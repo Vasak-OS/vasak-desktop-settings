@@ -51,6 +51,40 @@ AppArmor activo, no tuvieron una sola caída.
 4. **Borrar el archivo del perfil no lo descarga del kernel.** Hay que
    `apparmor_parser -R` o reiniciar.
 
+## Lo que dijo la bisección (diagnostico.sh)
+
+| Perfil sobre `vasak-polkit-agent` | Caídas en 25 s |
+|---|---|
+| sin perfil | 0 |
+| `flags=(unconfined)` — etiqueta sin mediar | **0** |
+| mínimo en complain (sólo `abstractions/base`) | **5** |
+| perfil completo | 5 |
+
+O sea: **no es ninguna regla nuestra**. Etiquetar el proceso no rompe nada;
+rompe el momento en que AppArmor empieza a mediar, con el perfil más vacío
+posible.
+
+Y los volcados de ese arranque acotan más todavía:
+
+| Proceso | Caídas | ¿Levanta el proceso web de WebKit? |
+|---|---|---|
+| `vasak-polkit-agent` | 500 | sí |
+| `vasak-press-and-hold` | 262 | sí |
+| `vasak-flare-daemon` | 250 | sí |
+| `vasak-permissions-agent` | 0 | es WebKit, pero no abre ventana hasta que le piden un permiso |
+| `vasak-keyring` | 0 | no tiene interfaz |
+
+Los que se caen son exactamente los que arrancan el proceso web. WebKit se
+aísla a sí mismo con bubblewrap y espacios de nombres, y la hipótesis es que ese
+aislamiento no sobrevive a estar confinado por AppArmor. `diagnostico2.sh` la
+pone a prueba.
+
+Si se confirma, la conclusión de fondo es incómoda pero clara: para nuestras
+ventanas Tauri, AppArmor **saca** un aislamiento (el de WebKit) para poner otro,
+y no es un buen negocio. Tendría sentido reservarlo para los binarios sin
+interfaz —`vasak-keyring` corrió confinado sin una sola caída— y para las
+aplicaciones de terceros.
+
 ## Cómo retomarlo
 
 Antes de recompilar nada con símbolos, conviene correr `diagnostico.sh`, que
