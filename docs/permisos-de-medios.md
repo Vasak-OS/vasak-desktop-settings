@@ -93,8 +93,28 @@ Con eso la forma queda:
         actions = { update-props = { permission_manager_name = "vasak-sin-video" } } }
     ]
 
-**Falta validarlo.** Un primer intento pareció funcionar y no probaba nada: ver
-abajo.
+### Probado, y la mitad de arriba no empareja
+
+Con la medición hecha bien —esperando a que el conjunto de dispositivos esté
+completo— la configuración de arriba **no hace nada**: el cliente ve exactamente
+los mismos objetos que sin ella, y WirePlumber no se queja.
+
+El registro del subsistema (`WIREPLUMBER_DEBUG=s-client:4`) dice por qué: al
+cliente lo termina atendiendo `find-default-access` y queda en `unrestricted`
+con el gestor por omisión. O sea que **la regla de `access.rules` no emparejó**.
+
+La causa más probable es que `application.process.binary` todavía no está puesta
+cuando se decide el acceso: el evento `select-access` se dispara al agregarse el
+cliente, y esa propiedad la manda el cliente después de conectar.
+
+Lo cual **refuerza el diseño del socket** en vez de desmentirlo: las propiedades
+que sí están en ese momento son las que fija el servidor desde las credenciales
+de la conexión, `pipewire.sec.*`. La regla tiene que emparejar por
+`pipewire.sec.socket`, que además es la única que el cliente no puede
+falsificar.
+
+La próxima prueba es entonces con el socket privilegiado publicado (etapa 1) y
+la regla emparejando por `pipewire.sec.socket`, no por el binario.
 
 ## Cómo medir esto sin engañarse
 
