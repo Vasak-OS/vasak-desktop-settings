@@ -53,9 +53,21 @@ AppArmor activo, no tuvieron una sola caída.
 
 ## Cómo retomarlo
 
-Con una build con símbolos de uno de los que se caen —el de polkit es el más
-simple— para poder leer la traza. Y en una máquina donde se pueda dejar el
-bucle corriendo sin quedarse sin teclado.
+Antes de recompilar nada con símbolos, conviene correr `diagnostico.sh`, que
+sale más barato y puede ahorrar todo lo demás. Bisecta por contenido del perfil
+—sin perfil, sólo etiqueta, mínimo en complain, y el completo— sobre el agente
+de polkit, que es el más simple de los que se caían y el único que no toma el
+teclado. Según dónde empiece a caerse:
+
+| Falla desde | Entonces la causa es | Y el próximo paso |
+|---|---|---|
+| «sólo etiqueta» | estar confinado, no ninguna regla | mirar WebKit y sus procesos auxiliares; probar `flags=(unconfined)` como hacen los perfiles de Brave y Vivaldi que trae el paquete |
+| «mínimo complain» | la mediación en complain | probar sin `include <abstractions/base>`, y con `abi <abi/3.0>` |
+| «perfil completo» | alguna regla nuestra | seguir bisecando ese archivo, empezando por `userns,` y las reglas de `/usr/lib/webkit*` |
+
+Recién si eso no alcanza, una build con símbolos del agente de polkit para poder
+leer la traza. Y en una máquina donde se pueda dejar el bucle corriendo sin
+quedarse sin teclado.
 
 Lo que sí quedó puesto en el sistema es AppArmor activo por la línea de
 arranque, con el paquete y sin ningún perfil nuestro: eso no confina nada, no
