@@ -28,8 +28,8 @@ profile vasak-keyring-prompt /usr/bin/vasak-keyring-prompt flags=(complain) {
   owner /run/user/@{uid}/webkitgtk/** rw,
   owner /dev/shm/** rw,
 
-  # Le escribís una contraseña: no tiene por qué poder mandarla a ningún lado.
-  deny network,
+  # ⚠ Acá NO van reglas `deny`: se aplican también en modo complain y son
+  # silenciosas. Ver la explicación entera en /etc/apparmor.d/vasak-keyring.
 
   /usr/bin/vasak-keyring-prompt mr,
 

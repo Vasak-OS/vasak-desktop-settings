@@ -27,9 +27,8 @@ profile vasak-flare-daemon /usr/bin/vasak-flare-daemon flags=(complain) {
   owner /run/user/@{uid}/webkitgtk/** rw,
   owner /dev/shm/** rw,
 
-  # Las notificaciones llegan por D-Bus y el historial es un archivo. Nada de
-  # esto sale a internet — y por acá pasan códigos de verificación.
-  deny network,
+  # ⚠ Acá NO van reglas `deny`: se aplican también en modo complain y son
+  # silenciosas. Ver la explicación entera en /etc/apparmor.d/vasak-keyring.
 
   /usr/bin/vasak-flare-daemon mr,
 

@@ -34,9 +34,24 @@ profile vasak-keyring /usr/bin/vasak-keyring flags=(complain) {
   include <abstractions/nameservice>
   include <abstractions/dbus-session-strict>
 
-  # Nada de red. Es la regla que más vale acá: sin sockets de red, una falla en
-  # este proceso no tiene por dónde mandar los secretos afuera.
-  deny network,
+  # ⚠ Acá NO van reglas `deny`. Se intentó y tumbó el escritorio.
+  #
+  # En AppArmor, `deny` se aplica **también en modo complain** —complain sólo
+  # afecta a lo que el perfil no permite explícitamente, no a lo que prohíbe— y
+  # encima es silenciosa: una denegación por `deny` no se audita salvo que se
+  # escriba `audit deny`. O sea que rompe y no deja rastro.
+  #
+  # Con un `deny network,` acá, el llavero, el diálogo de polkit, el de
+  # permisos, el de notificaciones y el lector de teclado no arrancaban: tokio
+  # crea un socketpair AF_UNIX para manejar señales, `network` sin calificar
+  # alcanza también a AF_UNIX, y el proceso moría con «failed to create
+  # UnixStream: Permission denied» sin una sola línea de AppArmor en el diario.
+  #
+  # Un perfil en complain tiene que poder permitirlo todo. Las restricciones se
+  # escriben al pasar a enforce, y ahí lo que sobra se prohíbe **no
+  # permitiéndolo**, que es como funciona AppArmor: lo que el perfil no nombra,
+  # no se puede. `deny` es para tapar algo que una abstracción incluida ya
+  # permitió, y en ese caso conviene `audit deny` para que se vea.
 
   /usr/bin/vasak-keyring mr,
 

@@ -30,8 +30,8 @@ profile vasak-polkit-agent /usr/bin/vasak-polkit-agent flags=(complain) {
   # polkit vive en el bus del sistema.
   include <abstractions/dbus-strict>
 
-  # Por acá pasa tu contraseña de administrador.
-  deny network,
+  # ⚠ Acá NO van reglas `deny`: se aplican también en modo complain y son
+  # silenciosas. Ver la explicación entera en /etc/apparmor.d/vasak-keyring.
 
   /usr/bin/vasak-polkit-agent mr,
 

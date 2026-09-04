@@ -29,8 +29,8 @@ profile vasak-press-and-hold /usr/bin/vasak-press-and-hold flags=(complain) {
   owner /run/user/@{uid}/webkitgtk/** rw,
   owner /dev/shm/** rw,
 
-  # Lo que lee no tiene por dónde irse.
-  deny network,
+  # ⚠ Acá NO van reglas `deny`: se aplican también en modo complain y son
+  # silenciosas. Ver la explicación entera en /etc/apparmor.d/vasak-keyring.
 
   /usr/bin/vasak-press-and-hold mr,
 
@@ -40,10 +40,6 @@ profile vasak-press-and-hold /usr/bin/vasak-press-and-hold flags=(complain) {
   /dev/uinput rw,
   /sys/devices/**/input*/** r,
   /run/udev/data/** r,
-
-  # Ni la cámara ni el micrófono: no los usa, y dejarlo escrito hace que se
-  # note si algún día empieza a pedirlos.
-  deny /dev/video* rw,
 
   include if exists <local/vasak-press-and-hold>
 }
