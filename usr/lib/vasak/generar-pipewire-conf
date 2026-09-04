@@ -1,0 +1,92 @@
+#!/bin/bash
+# Genera /etc/pipewire/pipewire.conf a partir del de upstream.
+#
+# ── Por qué esto existe ─────────────────────────────────────────────────────
+#
+# VasakOS necesita que PipeWire publique un socket adicional. Eso se configura
+# en los argumentos del módulo `libpipewire-module-protocol-native`, y no hay
+# forma de tocarlos con un drop-in: los drop-in de PipeWire sólo **añaden** a
+# `context.modules`, y el módulo de protocolo no se puede cargar dos veces —el
+# daemon aborta con «protocol PipeWire:Protocol:Native is already loaded» y el
+# equipo se queda sin audio—. Comprobado, no deducido.
+#
+# La única vía es que exista /etc/pipewire/pipewire.conf, que le gana al de
+# /usr/share. Y ahí aparece el problema de fondo: una copia estática queda vieja
+# en cuanto PipeWire se actualiza, **sin que nadie se entere**. Ese tipo de
+# fallo callado ya nos mordió dos veces.
+#
+# Por eso esto no es una copia: es un generador. Toma el archivo de upstream tal
+# como está hoy y le cambia una línea. Un hook de pacman lo vuelve a correr cada
+# vez que PipeWire se actualiza, así que lo nuestro siempre deriva del archivo
+# vigente.
+#
+# Y si upstream cambia de forma que el ancla ya no está, **falla y no escribe
+# nada**: es preferible quedarse con la configuración anterior y un error
+# visible, que escribir un archivo a medias y descubrirlo cuando alguien se
+# queda sin sonido.
+set -euo pipefail
+
+ORIGEN=${1:-/usr/share/pipewire/pipewire.conf}
+DESTINO=${2:-/etc/pipewire/pipewire.conf}
+
+# El socket adicional. Va a ser el privilegiado: cuando la política esté
+# completa, `pipewire-0` pasa a restringido y los clientes de confianza —el
+# portal, el escritorio— se mueven a éste.
+SOCKETS='sockets = [ { name = "pipewire-0" }, { name = "pipewire-0-manager" }, { name = "pipewire-0-priv" } ]'
+
+# El ancla es la línea de ejemplo comentada que trae upstream. Se exige que
+# aparezca **exactamente una vez**: si hay cero, cambiaron el archivo; si hay
+# más de una, el reemplazo sería ambiguo.
+ANCLA='^([[:space:]]*)#sockets = \[.*\]$'
+
+[ -r "$ORIGEN" ] || { echo "generar-pipewire-conf: no puedo leer $ORIGEN" >&2; exit 1; }
+
+n=$(grep -cE "$ANCLA" "$ORIGEN" || true)
+MARCA="# ARCHIVO GENERADO — no editar a mano."
+
+if [ "$n" != "1" ]; then
+    echo "generar-pipewire-conf: esperaba una línea '#sockets = [...]' en $ORIGEN y encontré $n." >&2
+    echo "  PipeWire cambió su archivo de configuración y el generador quedó viejo." >&2
+    # Y acá lo importante: apartarse. Si dejáramos el $DESTINO anterior, una
+    # copia de un pipewire.conf viejo seguiría pisando al de upstream, y el
+    # equipo correría con una configuración desactualizada por tiempo
+    # indefinido. Es preferible perder nuestro socket adicional —que sólo
+    # desactiva una función— antes que dejar a PipeWire con una configuración
+    # que ya no es la suya.
+    #
+    # Se borra sólo si el archivo lo generamos nosotros: si alguien puso el
+    # suyo a mano, no es nuestro para tocarlo.
+    if [ -f "$DESTINO" ] && head -1 "$DESTINO" | grep -qF "$MARCA"; then
+        rm -f "$DESTINO"
+        echo "  Se quitó $DESTINO para que PipeWire use el de upstream." >&2
+        echo "  El socket adicional deja de publicarse hasta que se arregle el generador." >&2
+    else
+        echo "  No se toca $DESTINO: no lo generamos nosotros." >&2
+    fi
+    exit 1
+fi
+
+TMP=$(mktemp) ; trap 'rm -f "$TMP"' EXIT
+{
+    echo "$MARCA"
+    echo "#"
+    echo "# Lo genera /usr/lib/vasak/generar-pipewire-conf desde $ORIGEN"
+    echo "# cada vez que se actualiza PipeWire (hook de pacman). Cualquier cambio"
+    echo "# a mano se pierde en la próxima actualización; lo que haya que cambiar"
+    echo "# va en el generador, o en un drop-in de pipewire.conf.d/ si alcanza."
+    echo "#"
+    echo "# Única diferencia con el de upstream: la línea 'sockets' del módulo"
+    echo "# libpipewire-module-protocol-native, que publica pipewire-0-priv."
+    echo ""
+} > "$TMP"
+sed -E "s|$ANCLA|\1$SOCKETS|" "$ORIGEN" >> "$TMP"
+
+# Comprobar que lo generado se parsea antes de ponerlo en su lugar. Un archivo
+# de configuración roto acá deja el equipo sin audio.
+if ! spa-json-dump "$TMP" >/dev/null 2>&1; then
+    echo "generar-pipewire-conf: lo generado no es SPA-JSON válido. No se toca $DESTINO." >&2
+    exit 1
+fi
+
+install -Dm644 "$TMP" "$DESTINO"
+echo "generar-pipewire-conf: $DESTINO generado desde $ORIGEN"

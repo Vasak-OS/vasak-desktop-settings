@@ -1,0 +1,24 @@
+# Regenera /etc/pipewire/pipewire.conf cuando PipeWire se actualiza.
+#
+# Sin esto, nuestra copia quedaría vieja en silencio en cuanto PipeWire cambie
+# su configuración, y el sistema correría con un pipewire.conf desactualizado
+# pisando al del paquete. Con esto, lo nuestro siempre deriva del archivo
+# vigente.
+#
+# Se dispara por la ruta del archivo y no por el paquete: si algún día PipeWire
+# se reorganiza en varios paquetes, el disparador sigue siendo el correcto.
+#
+# Va PostTransaction: si el generador falla, pacman avisa pero no aborta la
+# transacción —y el generador ya se encarga de apartarse dejando el de upstream
+# en su lugar—.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/share/pipewire/pipewire.conf
+
+[Action]
+Description = Regenerando la configuración de PipeWire de VasakOS...
+When = PostTransaction
+Exec = /usr/lib/vasak/generar-pipewire-conf
