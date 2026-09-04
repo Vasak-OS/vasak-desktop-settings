@@ -38,40 +38,34 @@ ExecStart=/usr/bin/swayidle -w \
     before-sleep 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen -d'
 Restart=on-failure
 
-# El endurecimiento de acá es deliberadamente más liviano que el del resto de
-# los demonios, y la razón es la línea de arriba: el bloqueo se lanza con
-# `systemd-run --scope`, que cambia el cgroup pero **no** el espacio de nombres.
-# O sea que todo lo que se le ponga a esta unidad lo hereda además
-# `vasak-lock-screen`, que es una ventana Tauri. Una pantalla de bloqueo que no
-# dibuja te deja afuera de tu propia sesión, así que las restricciones que
-# podrían romperla no van:
+# ⚠ Esta unidad va SIN endurecer, y no es un olvido: se intentó y rompió la
+# pantalla de bloqueo. Si vas a agregar directivas acá, leé esto antes.
 #
-#   - `PrivateDevices` le taparía /dev/dri al bloqueo y no habría con qué
-#     dibujar.
-#   - `MemoryDenyWriteExecute` mata a WebKit, que compila su JavaScript.
-#   - `RestrictNamespaces` le saca a WebKit su propio aislamiento.
+# El bloqueo se lanza con `systemd-run --scope`, que cambia el cgroup pero deja
+# al proceso como hijo de swayidle. O sea que `vasak-lock-screen` hereda todo lo
+# que se le ponga a esta unidad — y lo hereda de dos formas distintas:
 #
-# Lo que sí va es lo que un contador de inactividad no necesita para nada, y el
-# bloqueo tampoco: red, escribir en el sistema y ver el resto de los procesos.
-RestrictAddressFamilies=AF_UNIX AF_NETLINK
-
-NoNewPrivileges=yes
-CapabilityBoundingSet=
-PrivateTmp=yes
-ProtectClock=yes
-ProtectControlGroups=yes
-ProtectHostname=yes
-ProtectKernelLogs=yes
-ProtectKernelModules=yes
-ProtectKernelTunables=yes
-ProtectProc=invisible
-RestrictRealtime=yes
-RestrictSUIDSGID=yes
-LockPersonality=yes
-SystemCallArchitectures=native
-SystemCallFilter=@system-service
-SystemCallErrorNumber=EPERM
-ProtectSystem=full
+#   1. Los espacios de nombres. `PrivateDevices` le tapa /dev/dri y el bloqueo
+#      no tiene con qué dibujar.
+#
+#   2. **Los privilegios**, que es lo que no se vio venir. `NoNewPrivileges=yes`
+#      se hereda y no se puede soltar, y `pam_unix` valida la contraseña
+#      ejecutando /usr/bin/unix_chkpwd, que es setuid/setgid porque necesita
+#      leer /etc/shadow. Sin poder escalar, el helper responde «user unknown»,
+#      PAM devuelve Authinfo_Unavail (9) y el bloqueo dice que la contraseña
+#      está mal **con la contraseña correcta**. Un `CapabilityBoundingSet=`
+#      vacío hace lo mismo por otro camino.
+#
+# Y no alcanza con no escribir `NoNewPrivileges`: en una unidad de usuario lo
+# implican solas casi todas las de seccomp —SystemCallFilter,
+# RestrictAddressFamilies, RestrictNamespaces, MemoryDenyWriteExecute,
+# LockPersonality, RestrictRealtime, RestrictSUIDSGID—. Así que el
+# endurecimiento y esta forma de lanzar el bloqueo son incompatibles, y entre
+# las dos cosas gana poder entrar a tu sesión.
+#
+# Si algún día se quiere endurecer esto, primero hay que lanzar el bloqueo de
+# manera que no herede: un servicio transitorio (`systemd-run --user --unit=…`,
+# sin `--scope`) lo arranca el gestor del usuario y no como hijo de acá.
 
 [Install]
 WantedBy=graphical-session.target
