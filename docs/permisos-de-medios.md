@@ -134,6 +134,18 @@ Hipótesis pendientes, en orden de probabilidad:
 Lo que **no** es: ni la sintaxis de la acción, ni la cadena de permisos, ni el
 nombre de las propiedades — todo eso está verificado contra el código.
 
+### Reportado upstream
+
+https://gitlab.freedesktop.org/pipewire/wireplumber/-/work_items/1006
+
+Con el caso mínimo, la evidencia del registro y la lista de lo ya descartado,
+que es la mitad del valor del reporte: le ahorra al mantenedor el camino que ya
+recorrimos.
+
+Mientras no haya respuesta, la vía de PipeWire sigue sin control, y la pantalla
+de Privacidad y seguridad de la configuración lo dice explícitamente en vez de
+callarlo.
+
 ## Cómo medir esto sin engañarse
 
 WirePlumber tarda en volver a enumerar los dispositivos después de reiniciarse.
