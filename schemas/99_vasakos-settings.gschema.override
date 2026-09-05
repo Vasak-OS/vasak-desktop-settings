@@ -1,22 +1,38 @@
-[org.freedesktop.Tracker.Extract]
-sched-idle='always'
+# Sólo esquemas que el escritorio tiene instalados.
+#
+# Un `override` sobre un esquema ausente **no falla**: `glib-compile-schemas`
+# sale con cero y lo ignora en silencio. Por eso convivieron años acá tres
+# bloques que no hacían nada —Tracker, que no está en el escritorio; la luz
+# nocturna de gnome-settings-daemon, que en VasakOS la hace `wlsunset`; y el
+# suavizado de su plugin de xsettings, que además era el único lugar donde
+# pedíamos subpíxel—. El costo no es el archivo: es que alguien lea «acá está
+# configurado» y no lo esté.
 
-[org.freedesktop.Tracker.Miner.Files]
-sched-idle='always'
-index-on-battery=false
-
-[org.gnome.settings-daemon.plugins.color]
-night-light-enabled=true
-
+# Este es el esquema que **se lee de verdad**: `xdg-desktop-portal-gtk` —que
+# `vasak-portals.conf` pone como backend por defecto— informa estas claves a las
+# aplicaciones por el portal de ajustes.
+#
+# Las fuentes tienen que decir lo mismo que `etc/skel/.config/vasak/vasak.conf`,
+# que es de donde las toman las aplicaciones propias, y lo mismo que los
+# `settings.ini` de GTK. Las tres decían cosas distintas: acá «Roboto 10», en el
+# settings.ini «Noto Sans, 11» y en vasak.conf «FantasqueSansM Nerd Font Propo».
 [org.gnome.desktop.interface]
 cursor-theme='VasakOS'
-document-font-name='Roboto 10'
+document-font-name='Noto Sans 11'
 enable-animations=true
-font-name='Roboto 10'
+font-name='Noto Sans 11'
 gtk-im-module='gtk-im-context-simple'
 gtk-theme='VasakOS'
 icon-theme='VasakOS'
-monospace-font-name='Source Code Pro Regular 10'
+monospace-font-name='MesloLGL Nerd Font Mono 11'
+# Cómo se dibuja el texto, en el único lugar donde algo lo lee.
+#
+# `slight` conserva la forma de la letra en vez de encajarla en la grilla de
+# píxeles: se lee más suave. `grayscale` y no `rgba` porque el subpíxel es una
+# decisión por pantalla —ayuda en un LCD de franjas RGB y molesta en uno rotado,
+# OLED o HiDPI— y no un valor bueno para todas.
+font-antialiasing='grayscale'
+font-hinting='slight'
 
 [org.gnome.desktop.wm.preferences]
 titlebar-uses-system-font=true
@@ -28,16 +44,6 @@ tap-to-click=true
 click-method='areas'
 two-finger-scrolling-enabled=true
 tap-and-drag=true
-
-[org.gnome.gedit.preferences.editor]
-auto-indent=true
-editor-font='Source Code Pro Regular 10'
-scheme='solarized-dark'
-tabs-size=4
-use-default-font=false
-
-[org.gnome.settings-daemon.plugins.xsettings]
-antialiasing='rgba'
 
 [org.gtk.Settings.FileChooser]
 sort-directories-first=true
