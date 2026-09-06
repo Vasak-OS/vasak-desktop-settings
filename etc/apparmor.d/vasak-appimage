@@ -1,4 +1,4 @@
-# Perfil base para los AppImage: sin cámara ni micrófono por la vía directa.
+# Perfil base para los AppImage: sin cámara, sin micrófono y sin credenciales.
 #
 # ── Qué confina, y qué no ───────────────────────────────────────────────────
 #
@@ -102,6 +102,40 @@ profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage {
   # ALSA terminan en `c` (pcmC0D0c) y los de reproducción en `p`. Negar
   # /dev/snd/* entero dejaría a la aplicación muda, que no es lo que se decidió.
   audit deny /dev/snd/pcmC*D*c rwk,
+
+  # ── Lo que prueba quién sos ─────────────────────────────────────────────
+  #
+  # Esto llegó después que la cámara y es lo que más importa de las tres cosas
+  # que el perfil niega. Con `file,` y `network,` permitidos —que están arriba
+  # y tienen que estar—, un AppImage no podía sacarte una foto pero sí leer
+  # `~/.ssh/id_ed25519` y mandarlo a donde quisiera. Medido en una máquina de
+  # verdad: esa clave suele no tener frase de paso, así que es utilizable tal
+  # cual. Bloquear la cámara y dejar salir la clave es el orden invertido.
+  #
+  # `rwkl` y no `rwk`: sin la `l` se puede crear un enlace duro al archivo
+  # desde afuera del directorio negado y leerlo por ahí, lo que deja la valla
+  # en decorado. La `k` es el bloqueo de archivo, que también revela contenido.
+  audit deny @{HOME}/.ssh/** rwkl,
+  audit deny @{HOME}/.gnupg/** rwkl,
+
+  # La base del llavero: ahí están todas las contraseñas de la sesión.
+  audit deny @{HOME}/.local/share/vasak-keyring/** rwkl,
+
+  # El agente es peor que la clave. Con el socket no hace falta leer ningún
+  # archivo para firmar con ella, así que negar sólo `~/.ssh` dejaría la puerta
+  # de al lado abierta.
+  audit deny /run/user/*/ssh-agent.socket rw,
+  audit deny /run/user/*/gnupg/** rw,
+
+  # Los que valen una sesión entera sin ser una clave: un token de estos abre
+  # la cuenta igual que la contraseña, y encima sin segundo factor.
+  audit deny @{HOME}/.netrc rwkl,
+  audit deny @{HOME}/.git-credentials rwkl,
+  audit deny @{HOME}/.npmrc rwkl,
+  audit deny @{HOME}/.aws/** rwkl,
+  audit deny @{HOME}/.kube/** rwkl,
+  audit deny @{HOME}/.config/gh/** rwkl,
+  audit deny @{HOME}/.docker/config.json rwkl,
 
   include if exists <local/vasak-appimage>
 }
