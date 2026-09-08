@@ -8,7 +8,12 @@
 # conoce `source` ni los arreglos de bash.
 
 # El tema de los diálogos de Qt, para que las aplicaciones Qt no se vean ajenas.
-export QT_QPA_PLATFORMTHEME="qt6ct"
+#
+# `gtk3` lo trae `qt6-base` adentro (`libqgtk3.so`), así que existe siempre y
+# hace que Qt lea la configuración de GTK —tema, iconos y fuente—. Antes decía
+# `qt6ct`, que no está instalado: Qt descartaba el plugin en silencio y usaba sus
+# propios valores.
+export QT_QPA_PLATFORMTHEME="gtk3"
 
 # El editor de consola, para `git commit`, `visudo` y compañía.
 [ -x /usr/bin/nano ] && export EDITOR=/usr/bin/nano

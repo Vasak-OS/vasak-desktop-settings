@@ -26,7 +26,17 @@ fi
 
 # Wayland/GTK stack used by Tauri 2 and other native Linux apps.
 export QT_QPA_PLATFORM='wayland;xcb'
-export QT_QPA_PLATFORMTHEME=qt6ct
+# `gtk3` y no `qt6ct`: el tema de plataforma de GTK viene **dentro de
+# `qt6-base`** —`libqgtk3.so`— así que existe siempre, y hace que las
+# aplicaciones Qt lean la configuración de GTK: el tema, los iconos y **la
+# fuente**. Con una sola fuente de verdad no hay un segundo archivo que se
+# desincronice, que es de lo que veníamos.
+#
+# `qt6ct` estuvo acá y no está instalado ni es dependencia del escritorio, así
+# que Qt no encontraba el plugin, lo descartaba y usaba sus propios valores. Una
+# aplicación Qt se veía con la letra que eligiera Qt, no con la del escritorio, y
+# no había ningún error a la vista.
+export QT_QPA_PLATFORMTHEME=gtk3
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export QT_ENABLE_HIGHDPI_SCALING=1
