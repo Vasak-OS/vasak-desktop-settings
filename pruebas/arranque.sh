@@ -116,6 +116,24 @@ if "$RESTAURAR" "$tmp3/no-existe" "$tmp3" >/dev/null 2>&1; then
 fi
 [ $fallos -eq $antes ] && bien "una instantánea vieja da un error claro, no un silencio"
 
+echo "== una copia interrumpida no deja restos =="
+# El bucle de limpieza recorre `$DESTINO/*`, que no casa con los que empiezan
+# con punto: sin barrerlos aparte, un corte a mitad de camino dejaría 100 MiB
+# muertos adentro de todas las instantáneas siguientes.
+antes=$fallos
+tmp5=$(mktemp -d); boot5="$tmp5/boot"; copia5="$tmp5/copia"
+armar_boot "$boot5"
+mkdir -p "$copia5"
+# El temporal de un kernel que ya no está en /boot: nadie lo va a pisar
+# copiando encima, así que si no se barre se queda para siempre. (Uno de un
+# kernel vigente no sirve de prueba: la copia lo sobreescribe y se lo lleva.)
+echo "copia a medias" > "$copia5/.vmlinuz-linux-viejo.nuevo"
+"$COPIAR" "$boot5" "$copia5" || mal "salió con error"
+[ -e "$copia5/.vmlinuz-linux-viejo.nuevo" ] && mal "quedó el temporal de una copia interrumpida"
+[ -f "$copia5/vmlinuz-linux" ] || mal "no copió el kernel"
+[ $fallos -eq $antes ] && bien "los temporales se barren"
+rm -rf "$tmp5"
+
 echo "== un /boot vacío no rompe nada =="
 antes=$fallos
 tmp4=$(mktemp -d)

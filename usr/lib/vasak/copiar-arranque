@@ -47,6 +47,11 @@ fi
 
 mkdir -p "$DESTINO"
 
+# Restos de una copia interrumpida. El bucle de abajo recorre `$DESTINO/*`, que
+# no casa con los que empiezan con punto, así que sin esto un corte a mitad de
+# camino dejaría 100 MiB muertos adentro de todas las instantáneas siguientes.
+rm -f "$DESTINO"/.*.nuevo
+
 # Los tres tipos de archivo que `grub-btrfs` busca adentro de una instantánea:
 # `vmlinuz-*` para el kernel, `initramfs-*` para el initramfs, y el microcódigo
 # por los nombres de `GRUB_EARLY_INITRD_LINUX_STOCK`. Los nombres se conservan
