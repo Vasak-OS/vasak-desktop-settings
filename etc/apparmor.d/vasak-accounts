@@ -1,0 +1,89 @@
+# Perfil de AppArmor del centro de cuentas de VasakOS.
+#
+# ── Qué proceso es éste ─────────────────────────────────────────────────────
+#
+# `vasak-accounts` corre **como root** en el bus del sistema y es el único que
+# puede leer los tokens de las cuentas en línea, que viven en
+# /var/lib/vasak-accounts/<uid>/ con modo 0600. Cualquier aplicación que quiera
+# usar una cuenta se los tiene que pedir, y él le pregunta a
+# `vasak-permissions` si corresponde.
+#
+# O sea: es un proceso de root que habla con la red y recibe peticiones de
+# cualquier programa del usuario. Vale confinarlo.
+#
+# Lo que **no** hace, y por eso este perfil es corto: no parsea correo, ni
+# calendarios, ni nada que venga de un remitente desconocido. Lo único que
+# recibe de la red son las respuestas JSON del endpoint de token de OAuth2. El
+# día que exista el bucle de sincronización, va en otro binario y como servicio
+# del usuario — justamente para que parsear MIME ajeno no pase por root.
+#
+# ── Por qué está en modo `complain` ─────────────────────────────────────────
+#
+# `flags=(complain)` registra lo que se bloquearía y no bloquea nada. Es el
+# mismo camino que el perfil del llavero y por las mismas dos razones.
+#
+# La primera es la que prevé AppArmor: un perfil sólo se escribe bien mirando
+# lo que el programa pide de verdad, y eso no se adivina leyendo el código
+# —hay bibliotecas, certificados, resolución de nombres, /proc y /sys de por
+# medio—. Se arranca en complain, se usa un tiempo, y se aprieta con
+# `aa-logprof` sobre lo que quedó en el diario.
+#
+# La segunda es concreta y de este servicio en particular: si el perfil le
+# niega algo que necesita, lo que se rompe es **entregar tokens**. Todas las
+# cuentas en línea dejan de andar a la vez, y el síntoma que ve la persona es
+# «el correo no sincroniza» sin ninguna pista de que fue AppArmor. En complain
+# eso es imposible por construcción.
+#
+# Para pasarlo a enforce hay que sacar `flags=(complain)` **y** revisar el
+# diario primero. Ojo con dos cosas que en enforce cambian de significado:
+#
+#   1. Lo que el perfil no nombra queda prohibido, así que habría que listar
+#      todas las clases de regla que el proceso usa —`file`, `network`, `unix`,
+#      `dbus`, `signal`, `ptrace`—. Hay un ejemplo de esa forma en
+#      etc/apparmor.d/vasak-appimage.
+#   2. Las reglas `deny` recién ahí hacen algo. En complain no se aplican: está
+#      medido, el diario dice `apparmor="ALLOWED"` y el acceso pasa igual. Por
+#      eso acá no hay ninguna.
+#
+# El endurecimiento que **sí** está haciendo efecto hoy es el de la unidad de
+# systemd —ProtectSystem=strict, ProtectHome=yes, StateDirectory con 0700,
+# SystemCallFilter=@system-service, MemoryDenyWriteExecute—. Este perfil se
+# suma a eso, no lo reemplaza.
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile vasak-accounts /usr/bin/vasak-accounts flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+  include <abstractions/dbus-strict>
+
+  /usr/bin/vasak-accounts mr,
+
+  # El almacén: metadatos y secretos, un directorio por usuario.
+  /var/lib/vasak-accounts/ rw,
+  /var/lib/vasak-accounts/** rwkl,
+
+  # Identificar a quien llama.
+  #
+  # Del PID que da el bus se lee el ejecutable —para saber qué programa es— y
+  # el momento de arranque —para que el servicio de permisos detecte un PID
+  # reciclado—. Son procesos ajenos, así que además del archivo hace falta
+  # `ptrace (read)`: es la clase con la que AppArmor media mirar dentro de
+  # /proc de otro proceso, y sin ella el servicio no puede saber quién le
+  # habla y rechaza todo.
+  @{PROC}/@{pid}/stat r,
+  @{PROC}/@{pid}/exe r,
+  ptrace (read),
+
+  # Refrescar un token expirado contra el proveedor. Sólo salida HTTPS.
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  # Sitio para agregados locales sin tocar el paquete.
+  include if exists <local/vasak-accounts>
+}
