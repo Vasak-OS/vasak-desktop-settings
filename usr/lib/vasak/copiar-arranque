@@ -1,0 +1,95 @@
+#!/bin/bash
+# Guarda el kernel y su initramfs adentro del subvolumen raíz.
+#
+# ── Por qué esto existe ─────────────────────────────────────────────────────
+#
+# El ESP se monta en /boot, así que el kernel y los dos initramfs viven en FAT,
+# **afuera** de btrfs. Una instantánea del subvolumen raíz se lleva los módulos
+# —están en /usr/lib/modules— y no se lleva el kernel que los carga.
+#
+# Eso hace que volver atrás cruzando una actualización de kernel deje el kernel
+# nuevo con los módulos viejos. Arranca, y arranca sin red y sin gráficos: los
+# módulos de una versión no los carga un kernel de otra. Es el peor resultado
+# posible de una herramienta de recuperación — parece que funcionó.
+#
+# Con esta copia adentro de `@`, cada instantánea se lleva **también** el kernel
+# que le corresponde. Sirve para las dos mitades del problema:
+#
+#   - `grub-btrfs` encuentra un kernel propio en cada instantánea y arma una
+#     entrada de menú que arranca esa instantánea con su kernel. Sin esto elige
+#     `boot_separate` —porque /boot está en otra partición— y todas las entradas
+#     arrancarían con el kernel de hoy.
+#   - `restaurar-arranque` los devuelve al ESP después de restaurar, que es lo
+#     que deja el sistema realmente en el estado anterior.
+#
+# ── Lo que cuesta ───────────────────────────────────────────────────────────
+#
+# Un kernel y dos initramfs son unos 150 MiB. btrfs comparte las extensiones
+# entre instantáneas, así que sólo se paga de nuevo cuando el kernel cambia: no
+# son 150 MiB por instantánea, son 150 MiB por versión de kernel que siga viva
+# en alguna.
+set -euo pipefail
+
+ORIGEN=${1:-/boot}
+DESTINO=${2:-/var/lib/vasak/arranque}
+
+# Sólo en btrfs. En ext4 o xfs no hay instantáneas, así que la copia sería 150
+# MiB de disco a cambio de nada.
+#
+# La comprobación se saltea cuando vienen rutas por argumento, que es como lo
+# llaman las pruebas: ahí lo que se quiere ejercitar es el copiado, y el
+# directorio temporal nunca va a ser btrfs.
+if [ $# -eq 0 ] && [ "$(findmnt -no FSTYPE / 2>/dev/null)" != "btrfs" ]; then
+    exit 0
+fi
+
+[ -d "$ORIGEN" ] || exit 0
+
+mkdir -p "$DESTINO"
+
+# Los tres tipos de archivo que `grub-btrfs` busca adentro de una instantánea:
+# `vmlinuz-*` para el kernel, `initramfs-*` para el initramfs, y el microcódigo
+# por los nombres de `GRUB_EARLY_INITRD_LINUX_STOCK`. Los nombres se conservan
+# tal cual porque es por el nombre que los encuentra.
+patrones=('vmlinuz-*' 'initramfs-*.img' '*-ucode.img')
+
+vigentes=()
+for patron in "${patrones[@]}"; do
+    for archivo in "$ORIGEN"/$patron; do
+        [ -f "$archivo" ] || continue
+        nombre=${archivo##*/}
+        vigentes+=("$nombre")
+
+        # Sólo si cambió. Reescribir un archivo idéntico en btrfs crea
+        # extensiones nuevas, y con eso cada transacción de pacman costaría
+        # 150 MiB en la próxima instantánea aunque el kernel no se haya tocado.
+        if cmp -s "$archivo" "$DESTINO/$nombre"; then
+            continue
+        fi
+
+        # A un temporal y después `mv`, que es atómico dentro del mismo sistema
+        # de archivos. Si esto se corta por la mitad —un corte de luz durante
+        # una actualización de kernel es exactamente cuando hace falta— el
+        # archivo anterior sigue entero en lugar de quedar uno a medias, que es
+        # el que después se restauraría.
+        cp -f "$archivo" "$DESTINO/.$nombre.nuevo"
+        mv -f "$DESTINO/.$nombre.nuevo" "$DESTINO/$nombre"
+    done
+done
+
+# Lo que ya no está en /boot se borra de la copia. Sin esto, cada kernel que
+# alguien desinstala se queda acá para siempre, y `grub-btrfs` seguiría
+# ofreciendo entradas de menú para arrancar un kernel cuyos módulos ya no
+# existen en ninguna instantánea.
+for archivo in "$DESTINO"/*; do
+    [ -f "$archivo" ] || continue
+    nombre=${archivo##*/}
+    for vigente in ${vigentes[@]+"${vigentes[@]}"}; do
+        [ "$nombre" = "$vigente" ] && continue 2
+    done
+    rm -f "$archivo"
+done
+
+# Que la copia esté en el disco y no sólo en la caché. La instantánea se toma
+# en el mismo hook de pacman, y una copia que todavía está en memoria no entra.
+sync -f "$DESTINO" 2>/dev/null || sync

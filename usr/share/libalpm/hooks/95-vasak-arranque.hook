@@ -1,0 +1,38 @@
+# Guarda el kernel adentro del subvolumen raíz cuando cambia.
+#
+# El ESP se monta en /boot, así que el kernel queda afuera de btrfs y las
+# instantáneas no se lo llevan. Ver /usr/lib/vasak/copiar-arranque.
+#
+# El número no es decorativo: libalpm corre los hooks de PostTransaction en
+# orden alfabético por nombre de archivo, y `95` deja la copia justo en el medio
+# de los dos que importan.
+#
+#   90-mkinitcpio-install  genera el initramfs nuevo
+#   95-vasak-arranque      lo copia adentro del subvolumen raíz   ← éste
+#   zz-snap-pac-post       toma la instantánea posterior
+#
+# Antes del 90 se copiaría el initramfs anterior; después del `zz` la copia
+# quedaría afuera de la instantánea que acaba de tomarse, que es exactamente la
+# que la va a necesitar.
+#
+# Los disparadores son los que usa el propio mkinitcpio, más el microcódigo:
+# `usr/lib/modules/*/vmlinuz` cubre todo paquete de kernel sin nombrar ninguno,
+# `usr/lib/initcpio/*` cubre un cambio en cómo se genera el initramfs, y
+# `boot/*-ucode.img` los paquetes de microcódigo de Intel y AMD.
+#
+# También en `Remove`: desinstalar un kernel tiene que sacarlo de la copia, o
+# grub-btrfs seguiría ofreciendo una entrada para arrancarlo.
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Path
+Target = usr/lib/modules/*/vmlinuz
+Target = usr/lib/initcpio/*
+Target = boot/*-ucode.img
+
+[Action]
+Description = Guardando el kernel para las instantáneas de VasakOS...
+When = PostTransaction
+Exec = /usr/lib/vasak/copiar-arranque

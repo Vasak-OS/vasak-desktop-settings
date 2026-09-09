@@ -1,0 +1,57 @@
+#!/bin/bash
+# Devuelve al ESP el kernel guardado adentro del subvolumen raíz.
+#
+# Es la otra mitad de `copiar-arranque`, y la que se corre **después de volver a
+# una instantánea**.
+#
+# Restaurar una instantánea devuelve /usr/lib/modules al estado que tenía, pero
+# no toca /boot: el ESP está en otra partición y ninguna instantánea lo alcanza.
+# Sin este paso el sistema queda con el kernel de hoy y los módulos de ayer, que
+# arranca —y arranca sin red ni gráficos—. Con este paso queda entero.
+#
+# Se corre desde el sistema ya restaurado, no desde el que se va a descartar:
+# lee la copia que trae la instantánea.
+set -euo pipefail
+
+ORIGEN=${1:-/var/lib/vasak/arranque}
+DESTINO=${2:-/boot}
+
+if [ ! -d "$ORIGEN" ]; then
+    echo "No hay copia del arranque en $ORIGEN: no hay nada que restaurar." >&2
+    echo "Es lo esperable si la instantánea es anterior a esta función." >&2
+    exit 1
+fi
+
+copiados=0
+for archivo in "$ORIGEN"/*; do
+    [ -f "$archivo" ] || continue
+    nombre=${archivo##*/}
+    if cmp -s "$archivo" "$DESTINO/$nombre"; then
+        continue
+    fi
+    # Igual que en la copia: a un temporal y después `mv`. Acá importa más
+    # todavía, porque un initramfs a medias en el ESP es un sistema que no
+    # arranca y que ya no tiene de dónde sacar el bueno.
+    cp -f "$archivo" "$DESTINO/.$nombre.nuevo"
+    mv -f "$DESTINO/.$nombre.nuevo" "$DESTINO/$nombre"
+    copiados=$((copiados + 1))
+done
+
+# Los kernels que hay en /boot y no en la copia sobran: son de después de la
+# instantánea. Se borran, porque si no el menú sigue ofreciendo arrancar un
+# kernel cuyos módulos la instantánea no trae — que es justamente el estado que
+# esto viene a evitar.
+sobrantes=0
+for archivo in "$DESTINO"/vmlinuz-* "$DESTINO"/initramfs-*.img; do
+    [ -f "$archivo" ] || continue
+    nombre=${archivo##*/}
+    if [ ! -f "$ORIGEN/$nombre" ]; then
+        rm -f "$archivo"
+        sobrantes=$((sobrantes + 1))
+    fi
+done
+
+sync -f "$DESTINO" 2>/dev/null || sync
+
+echo "Arranque restaurado: $copiados archivo(s) copiado(s), $sobrantes de más eliminado(s)."
+echo "Falta rehacer el menú de GRUB:  grub-mkconfig -o /boot/grub/grub.cfg"
