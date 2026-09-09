@@ -67,6 +67,16 @@ profile vasak-accounts /usr/bin/vasak-accounts flags=(complain) {
   /var/lib/vasak-accounts/ rw,
   /var/lib/vasak-accounts/** rwkl,
 
+  # El catálogo de proveedores OAuth2: sólo lectura. El de /usr lo trae el
+  # paquete y el de /etc lo agrega quien administra el equipo con su client_id.
+  # Ninguno de los dos lo escribe este proceso — define a qué servidor se le
+  # mandan los códigos de autorización, así que poder escribirlo sería poder
+  # apuntar «Google» a otro lado.
+  /usr/share/vasak-accounts/ r,
+  /usr/share/vasak-accounts/** r,
+  /etc/vasak-accounts/ r,
+  /etc/vasak-accounts/** r,
+
   # Identificar a quien llama.
   #
   # Del PID que da el bus se lee el ejecutable —para saber qué programa es— y
