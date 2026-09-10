@@ -146,6 +146,92 @@ Mientras no haya respuesta, la vía de PipeWire sigue sin control, y la pantalla
 de Privacidad y seguridad de la configuración lo dice explícitamente en vez de
 callarlo.
 
+## La decisión: se espera a WirePlumber
+
+El issue [vasak-desktop-settings#3][3] planteaba dos caminos y una condición
+para elegir: **medir cuántos programas de los que la gente usa abren el
+dispositivo directo**. Si eran pocos, sacar el acceso directo era un permiso
+real hoy; si eran muchos, convenía esperar.
+
+[3]: https://github.com/Vasak-OS/vasak-desktop-settings/issues/3
+
+### La medición
+
+Sobre un escritorio con 1271 paquetes instalados, buscando qué binarios y
+bibliotecas nombran `/dev/video`:
+
+| paquete | qué es |
+|---|---|
+| `google-chrome` | el navegador |
+| `electron40`, `electron42` | **toda** aplicación de Electron |
+| `qt6-webengine` | toda aplicación Qt que muestre web |
+| `webkit2gtk-4.1`, `webkitgtk-6.0` | ídem con GTK, y nuestros propios diálogos |
+| `telegram-desktop` | mensajería con videollamada |
+| `obs-studio` | transmisión y grabación |
+| `vlc-plugin-*`, `ffmpeg`, `sdl3` | reproducción y captura |
+| `gst-plugins-good` | `v4l2src`, que usan muchas aplicaciones GTK |
+| `zbar` | lector de códigos desde la cámara |
+
+Más las herramientas de diagnóstico de `v4l-utils`, que no cuentan: nadie
+videollama con `v4l2-ctl`.
+
+**Son muchos, y son los que importan.** Es la superficie entera de navegadores
+y videollamadas.
+
+### El matiz que no cambia la decisión
+
+Los binarios basados en Chromium traen `WebRtcPipeWireCamera`, o sea que
+**saben** pedir la cámara por PipeWire. Está detrás de una bandera, apagada de
+fábrica, y no hay forma de encenderla en todo el sistema: Chrome lee
+`/etc/chromium-flags.conf`, pero una aplicación de Electron no lee nada
+parecido. Encenderla aplicación por aplicación no es una política, es una lista
+que se desactualiza.
+
+### Por qué no alcanza el diálogo del portal
+
+Las mismas aplicaciones nombran también `org.freedesktop.portal.Camera`, y ese
+camino **sí** muestra un diálogo: el portal se lo pide a nuestro backend de
+`org.freedesktop.impl.portal.Access`, que es el mismo que atiende la captura de
+pantalla.
+
+Pero no es la decisión que gobierna, y está dicho en el propio código
+(`vasak-permissions/src-tauri/src/portal.rs`): el portal guarda la respuesta en
+**su** almacén, no en el nuestro, y lo único que le pasa al backend es un
+`app_id` que **está vacío fuera de un sandbox**. Sin sandbox no hay a quién
+atribuirle la decisión, así que no puede ser por aplicación ni aparecer en
+Privacidad y seguridad para revocarla.
+
+VasakOS no distribuye Flatpak, así que fuera de un sandbox son todas.
+
+### Entonces
+
+Se toma el **camino 1**: esperar a que WirePlumber aplique los permisos por
+cliente. Sacar el acceso directo hoy rompería los navegadores, las
+videollamadas y OBS a cambio de un permiso que ni siquiera cubriría a quien use
+el portal.
+
+Lo que sostiene la espera es que la pantalla no promete de más: el texto de
+alcance de Privacidad y seguridad nombra que una aplicación que se los pida a
+PipeWire todavía no se detiene.
+
+### Cómo rehacer la medición
+
+```
+grep -rlsa "/dev/video" /usr/bin /usr/lib /opt | while read -r f; do
+    pacman -Qoq "$f" 2>/dev/null
+done | sort -u
+```
+
+Y para ver si algo de eso además sabe el camino de PipeWire:
+
+```
+grep -lsa "PipeWireCamera" /opt/google/chrome/chrome /usr/lib/electron*/electron
+```
+
+La decisión se vuelve a mirar cuando cambie una de dos cosas: que WirePlumber
+conteste, o que los navegadores enciendan `WebRtcPipeWireCamera` de fábrica. La
+segunda haría al camino 2 mucho más barato.
+
 ## Cómo medir esto sin engañarse
 
 WirePlumber tarda en volver a enumerar los dispositivos después de reiniciarse.
