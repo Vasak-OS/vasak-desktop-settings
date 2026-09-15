@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# Esperar a que el escritorio esté dibujado.
+#
+# Va como `ExecStart=` de `vasak-esperar-escritorio.service`, que se ordena
+# `Before=xdg-desktop-autostart.target`: mientras esto no termine, el inicio
+# automático no arranca.
+#
+# # Cómo se sabe que está listo
+#
+# Por el nombre `org.vasak.os.Desktop` en el bus de sesión, que `vasak-desktop`
+# registra al final de su setup — o sea cuando ya creó el fondo, el panel y el
+# centro de control. No hace falta inventar ninguna señal nueva: ésa ya existe y
+# significa exactamente lo que se quiere preguntar.
+#
+# Mirar el proceso no serviría: existe desde el primer instante y pasa dieciséis
+# segundos inicializando.
+#
+# # Por qué hay tope, y por qué sale bien igual
+#
+# Si el escritorio no arranca, esto **no** puede dejar el inicio automático
+# colgado para siempre: sería cambiar «el fondo tarda» por «no abre nada». Al
+# vencerse el tope se sigue de largo y se anota por qué, que es lo que estaba
+# pasando antes de esta unidad.
+#
+# Veinte segundos: el arranque medido con el sistema tranquilo es de 467 ms y el
+# peor caso observado —peleando la máquina con todo el inicio automático— fue de
+# 16,7 s. Con la compuerta puesta ese peor caso no debería volver a darse, así
+# que veinte deja margen de sobra sin que una falla cueste una eternidad.
+set -u
+
+NOMBRE=org.vasak.os.Desktop
+TOPE=20
+PASO=0.2
+
+esta_listo() {
+    busctl --user list --no-legend 2>/dev/null | grep -q "^${NOMBRE}[[:space:]]"
+}
+
+inicio=$SECONDS
+while ! esta_listo; do
+    if (( SECONDS - inicio >= TOPE )); then
+        echo "el escritorio no registró ${NOMBRE} en ${TOPE}s; se sigue igual" >&2
+        exit 0
+    fi
+    sleep "$PASO"
+done
+
+echo "escritorio listo en $((SECONDS - inicio))s"
