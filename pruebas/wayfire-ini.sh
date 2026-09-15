@@ -107,6 +107,30 @@ else
     [ "$faltan" -eq 0 ] && ok 'cada protocolo viejo tiene su reemplazo estándar'
 fi
 
+# ---------------------------------------------------------------------------
+tema 'El escritorio no se lanza dos veces'
+
+# `vasak-desktop` lo arranca `vasak-desktop.service`, no este `[autostart]`.
+# Devolver la línea acá significaría **dos escritorios**: uno lanzado por
+# wayfire y otro por systemd, los dos peleando por el panel y el fondo.
+#
+# La línea estuvo, y sacarla es lo que arregló que el escritorio tardara 16,7 s
+# en dibujarse —peleándole la máquina a todo el inicio automático— cuando solo
+# tarda 467 ms. Ver Vasak-OS/vasak-desktop#75.
+autostart=$(sed -n '/^\[autostart\]/,/^\[/p' "$INI" | grep -vE '^[[:space:]]*#')
+if printf '%s' "$autostart" | grep -qE '^[^#]*=[[:space:]]*vasak-desktop[[:space:]]*$'; then
+    mal 'el [autostart] volvió a lanzar vasak-desktop: con la unidad puesta, eso abre dos escritorios'
+else
+    ok 'el escritorio queda en manos de su unidad'
+fi
+
+# `uwsm finalize` sí tiene que seguir acá: es lo que exporta el entorno de la
+# sesión al gestor de usuario, y sin eso la unidad del escritorio arranca sin
+# `WAYLAND_DISPLAY`.
+printf '%s' "$autostart" | grep -q 'uwsm finalize' \
+    && ok 'uwsm finalize sigue en su lugar' \
+    || mal 'falta uwsm finalize: sin eso la sesión no exporta su entorno y la unidad del escritorio arranca a ciegas'
+
 printf '\n'
 if [ "$fallos" -eq 0 ]; then
     printf '\033[32mTodo bien.\033[0m\n'
