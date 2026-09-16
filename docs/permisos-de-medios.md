@@ -1,9 +1,14 @@
-# Cámara y micrófono: por dónde va el control
+# Cámara, micrófono y pantalla: por dónde va el control
 
 Registro de diseño de cómo VasakOS hace cumplir las decisiones de permisos sobre
-cámara y micrófono. Está escrito porque cada pieza costó descubrirla y varias
-conclusiones intermedias fueron **equivocadas**; sin esto, el próximo intento
-las repite.
+cámara, micrófono y captura de pantalla. Está escrito porque cada pieza costó
+descubrirla y varias conclusiones intermedias fueron **equivocadas**; sin esto,
+el próximo intento las repite.
+
+Dos de esas equivocaciones estuvieron escritas acá como si fueran hechos, y las
+dos decían que algo era imposible cuando no lo era. Quedan en el texto, marcadas,
+en vez de borrarse: saber qué se creyó y por qué era falso vale más que un
+documento que parezca que siempre tuvo razón.
 
 ## El problema
 
@@ -11,6 +16,9 @@ las repite.
 ellos en Configuración, pero esas decisiones **no se hacían cumplir**: su propio
 `is_enforceable()` sólo devuelve verdadero para las cuentas online. Quien reparte
 esos recursos es PipeWire, y no consulta la política.
+
+Desde entonces se cubrió una de las dos puertas —la del portal, ver abajo—, y la
+de PipeWire sigue abierta, que es de lo que trata el resto de este documento.
 
 ## Lo que ya está hecho
 
@@ -20,6 +28,21 @@ esos recursos es PipeWire, y no consulta la política.
 captura a los AppImage. Cierra la vía de atrás —la aplicación que se saltea
 PipeWire y abre el dispositivo— pero no la principal, porque en este sistema
 **PipeWire es quien abre la cámara** y la expone como nodo suyo.
+
+### La vía del portal, cerrada en el backend
+
+Lo que una aplicación pide por `xdg-desktop-portal` —la cámara de las
+videollamadas del navegador, compartir la pantalla— lo pregunta el backend de
+VasakOS, que desde `vasak-permissions#56` **consulta lo guardado antes de abrir
+el diálogo**: lo concedido no se vuelve a preguntar, lo rechazado se rechaza sin
+diálogo, y las dos cosas aparecen en Privacidad y seguridad para retirarlas.
+
+Esto era lo que la sección «Por qué el diálogo del portal no reemplaza a esto»
+daba por imposible. Ver ahí por qué dejó de serlo, y qué de aquel razonamiento
+sigue en pie.
+
+Cubre **lo que pasa por el portal**, que no es todo. Ver abajo: la pantalla
+tiene su propia puerta de atrás, y es más ancha de lo que parecía.
 
 ### El socket privilegiado (etapa 1)
 
@@ -187,32 +210,103 @@ fábrica, y no hay forma de encenderla en todo el sistema: Chrome lee
 parecido. Encenderla aplicación por aplicación no es una política, es una lista
 que se desactualiza.
 
-### Por qué no alcanza el diálogo del portal
+### Por qué el diálogo del portal no reemplaza a esto
 
 Las mismas aplicaciones nombran también `org.freedesktop.portal.Camera`, y ese
 camino **sí** muestra un diálogo: el portal se lo pide a nuestro backend de
 `org.freedesktop.impl.portal.Access`, que es el mismo que atiende la captura de
 pantalla.
 
-Pero no es la decisión que gobierna, y está dicho en el propio código
-(`vasak-permissions/src-tauri/src/portal.rs`): el portal guarda la respuesta en
-**su** almacén, no en el nuestro, y lo único que le pasa al backend es un
-`app_id` que **está vacío fuera de un sandbox**. Sin sandbox no hay a quién
-atribuirle la decisión, así que no puede ser por aplicación ni aparecer en
-Privacidad y seguridad para revocarla.
+#### La razón vieja, que era falsa
 
-VasakOS no distribuye Flatpak, así que fuera de un sandbox son todas.
+Este documento decía que ese diálogo no podía gobernar nada porque
+
+> lo único que le pasa al backend es un `app_id` que **está vacío fuera de un
+> sandbox**. Sin sandbox no hay a quién atribuirle la decisión, así que no puede
+> ser por aplicación ni aparecer en Privacidad y seguridad para revocarla.
+>
+> VasakOS no distribuye Flatpak, así que fuera de un sandbox son todas.
+
+Era cierto cuando se escribió y dejó de serlo. `xdg-desktop-portal` 1.22 expone
+`org.freedesktop.host.portal.Registry`, donde una aplicación **sin sandbox**
+declara su identificador, y las basadas en Chromium la usan. Medido el
+2026-09-15, en el diario del agente, con Chrome pidiendo compartir la pantalla y
+ningún sandbox de por medio:
+
+```
+16:26:34  el portal pide '¿Le permitís compartir tu pantalla?' (app_id 'com.google.Chrome')
+```
+
+Lo que llega vacío es sólo lo que no se registra, y eso se sigue preguntando
+cada vez.
+
+Sobre esa premisa se guarda ahora la decisión, contra `portal:<app_id>` y
+marcada como no verificada — el `app_id` lo declara la propia aplicación y no lo
+comprueba nadie. El porqué de aceptar esa identidad imperfecta está en
+`portal_key`, en el crate del protocolo de `vasak-permissions`; el resumen es
+que la alternativa medida era un diálogo idéntico cuatro veces en veinte
+segundos, que enseña a conceder sin leer.
+
+#### La razón que sigue en pie
+
+Para **la cámara**, el camino del portal no cubre a todas las aplicaciones, y por
+eso no reemplaza al de PipeWire. Pedirla por ahí es lo que hace
+`WebRtcPipeWireCamera` en los binarios basados en Chromium, y esa bandera está
+apagada de fábrica —el matiz de más arriba—: lo normal sigue siendo que abran
+`/dev/video0`. Y nada obliga a una aplicación a usar el portal; la que no
+quiera, no lo usa.
+
+O sea que el portal cierra la puerta de las aplicaciones que se comportan, y la
+que no se comporta la tiene abierta igual. Eso es exactamente lo que un control
+por debajo —PipeWire, o AppArmor— sí puede impedir.
+
+#### Y la pantalla tiene la misma puerta de atrás
+
+Esto se dio por resuelto y **no lo está**. El razonamiento que parecía cerrarlo
+era que en Wayland un cliente no puede leer la pantalla por su cuenta, así que
+todo lo que capture tiene que pasar por el portal.
+
+Es falso en un compositor wlroots. Medido el 2026-09-15 en una sesión de
+VasakOS, con el escritorio andando:
+
+```
+$ grim prueba.png
+$ ls -la prueba.png
+-rw-r--r-- 1 pato pato 337496 sep 15 22:17 prueba.png
+```
+
+La pantalla entera, sin portal, sin diálogo y sin que nada quedara anotado.
+`zwlr_screencopy_manager_v1` le alcanza a cualquier cliente que sepa pedirlo, y
+es el mismo protocolo del que depende `xdg-desktop-portal-wlr` para capturar.
+
+O sea que compartir la pantalla está en la misma situación que la cámara: el
+portal cierra la puerta de las aplicaciones que se comportan, y la que no se
+comporta la tiene abierta igual. La diferencia es que acá no hay ni siquiera un
+perfil de AppArmor que cubra la vía directa, porque no es un archivo de
+dispositivo que se pueda negar: es un protocolo de Wayland.
+
+Lo que **no** se midió, y hace falta antes de decidir nada: si Wayfire puede
+restringir `zwlr_screencopy_manager_v1` por cliente —`wp_security_context_manager_v1`
+está expuesto, que es el protocolo pensado justamente para eso—, y qué se
+rompería al hacerlo: `vasak-shot` y cualquier grabador usan ese mismo camino.
 
 ### Entonces
 
 Se toma el **camino 1**: esperar a que WirePlumber aplique los permisos por
 cliente. Sacar el acceso directo hoy rompería los navegadores, las
-videollamadas y OBS a cambio de un permiso que ni siquiera cubriría a quien use
-el portal.
+videollamadas y OBS, y el permiso que se ganaría a cambio ya lo cubre el portal
+para quien lo use.
 
-Lo que sostiene la espera es que la pantalla no promete de más: el texto de
+La corrección de más arriba **no cambia esta decisión**, y conviene decirlo
+porque invita a pensar lo contrario: que el portal ahora recuerde y revoque no
+alcanza a la aplicación que no lo usa, que es justo la que preocupa.
+
+Lo que sostiene la espera es que la pantalla no promete de más. El texto de
 alcance de Privacidad y seguridad nombra que una aplicación que se los pida a
-PipeWire todavía no se detiene.
+PipeWire todavía no se detiene, y desde `vasak-settings#83` nombra también hasta
+dónde llega el perfil de AppArmor: **sólo a los AppImage de la carpeta del
+usuario**. Decía «lo que no instaló el sistema», que es más ancho — un binario
+suelto descargado ahí tampoco tiene perfil.
 
 ### Cómo rehacer la medición
 
