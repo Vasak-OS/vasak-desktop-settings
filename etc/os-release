@@ -1,12 +1,25 @@
 # Quién es este sistema, para todo lo que pregunte.
 #
 # `filesystem` de Arch trae /usr/lib/os-release y **no** /etc/os-release, así que
-# esta ruta está libre y no hay conflicto de archivos. Lo que se lee primero es
-# /etc/os-release, con /usr/lib/os-release como respaldo: por eso alcanza con
-# poner esto para que el sistema entero se identifique como VasakOS.
+# esta ruta está libre: no la posee ningún paquete, y por eso la puede tomar
+# éste. Lo que se lee primero es /etc/os-release, con /usr/lib/os-release como
+# respaldo — de ahí que alcance con poner este archivo para que el sistema entero
+# se identifique como VasakOS.
 #
-# Sin este archivo, un VasakOS instalado decía «Arch Linux» en `fastfetch`, en
-# los reportes de bugs y en el nombre que los navegadores informan.
+# Sin él, un VasakOS instalado dice «Arch Linux»: el destino se arma con
+# `pacstrap`, no copiando el squashfs de la ISO, así que el os-release del medio
+# live no llega a ninguna parte y lo único que queda es el de `filesystem`. Se ve
+# en `fastfetch`, en los reportes de bugs y en el nombre que los navegadores
+# informan.
+#
+# Va en el `backup=()` del PKGBUILD, y no por ser configuración que alguien edite.
+# Es por los equipos donde /etc/os-release ya existe **sin dueño** —quien instaló
+# otra distribución y le puso VasakOS encima: acá, CachyOS—. Ahí pacman aborta la
+# transacción entera con «exists in filesystem», y no hay scriptlet que lo evite
+# porque el conflicto se detecta antes de que corra ninguno. Declarada como
+# backup, en cambio, la ruta se toma sin conflicto: el archivo viejo se queda y el
+# nuestro llega al lado como `.pacnew`. Quien resuelve ese `.pacnew` es el
+# `.install`, y sólo cuando el de abajo no dice ya `ID=vasakos`.
 NAME="VasakOS Linux"
 PRETTY_NAME="VasakOS"
 
@@ -17,6 +30,17 @@ PRETTY_NAME="VasakOS"
 ID=vasakos
 ID_LIKE=arch
 
+# La versión de la publicación. El dato vive en /etc/vasakos/vasakos-release, que
+# es el archivo que los documentos de reporte de bugs le piden a la gente; acá se
+# repite porque es de donde lo leen los programas —`vasak-settings` busca
+# `VERSION=` y hasta ahora mostraba «Unknown»—. Que los dos digan lo mismo lo
+# comprueba `pruebas/identidad-del-sistema.sh`: son dos lugares con el mismo dato
+# y nada más obliga a que coincidan.
+VERSION="0.6.2 Beta"
+VERSION_ID=0.6.2
+
+# Y que el sistema es rolling, que es lo que distingue «la publicación con la que
+# se instaló» de «hasta dónde está actualizado».
 BUILD_ID=rolling
 ANSI_COLOR="38;2;0;122;204"
 HOME_URL='https://os.vasak.net.ar/'
