@@ -1,0 +1,80 @@
+// El logo de VasakOS en `fastfetch`.
+//
+// Sin esto dibuja el de Arch. No es que `LOGO=vasakos` de /etc/os-release esté
+// mal: fastfetch trae sus logos compilados adentro del binario, no conoce
+// ninguno con ese nombre, y cae por `ID_LIKE=arch` — que es exactamente lo que
+// el formato manda hacer. Un logo propio sólo entra por configuración.
+//
+// Va en /etc/fastfetch/ y no en /etc/skel/ para que lo vea también quien ya
+// tiene su usuario creado; en skel sólo alcanzaría a los que se crearan después.
+// fastfetch busca su configuración en, por orden: ~/.config/fastfetch/,
+// ~/fastfetch/, /etc/xdg/fastfetch/ y acá, y se queda con la **primera** que
+// encuentra. O sea que quien tenga la suya no ve nada de esto, que es lo
+// correcto.
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+    "logo": {
+        // "file" y no "builtin": el nombre no existe adentro de fastfetch. Se
+        // resuelve contra sus rutas de datos —`fastfetch --list-data-paths`—,
+        // así que alcanza con el nombre del archivo y no hace falta la ruta
+        // entera.
+        "type": "file",
+        // El dibujo sale de la silueta del lince de la marca —el mismo
+        // `start-here` del botón del menú, en vasakos-icon-theme—, y no del logo
+        // completo: a cuarenta columnas el trazo fino de la cara se vuelve ruido
+        // y no se reconoce nada. Se rehace con:
+        //
+        //   rsvg-convert -w 800 start-here.svg -o /tmp/l.png
+        //   magick /tmp/l.png -alpha extract -threshold 50% -trim +repage /tmp/s.png
+        //
+        // y llevando esa imagen a 40x20 caracteres con la rampa ' .:-=+*#%@'.
+        "source": "vasakos.txt",
+        // El mismo valor que `ANSI_COLOR` en /etc/os-release, que es el color con
+        // el que el sistema se presenta en todos lados.
+        // `pruebas/identidad-del-sistema.sh` comprueba que sigan siendo el mismo.
+        "color": { "1": "38;2;0;122;204" }
+    },
+    // La lista tiene que estar entera.
+    //
+    // Un archivo de configuración **reemplaza** lo que fastfetch trae por
+    // omisión: con sólo el bloque del logo, `fastfetch` dibuja el lince y no
+    // informa nada. Tampoco vale `"modules": "default"`, que da
+    // «Property 'modules' must be an array of strings or objects».
+    //
+    // Así que esto es una copia de `fastfetch --gen-config`, con lo que eso
+    // implica: si una versión nueva agrega un módulo a su lista, acá no aparece.
+    // Por eso `pruebas/identidad-del-sistema.sh` la compara contra
+    // `fastfetch --print-structure` y falla si se separaron — la actualización
+    // silenciosa se vuelve un error de compilación.
+    "modules": [
+        "title",
+        "separator",
+        "os",
+        "host",
+        "kernel",
+        "uptime",
+        "packages",
+        "shell",
+        "display",
+        "de",
+        "wm",
+        "wmtheme",
+        "theme",
+        "icons",
+        "font",
+        "cursor",
+        "terminal",
+        "terminalfont",
+        "cpu",
+        "gpu",
+        "memory",
+        "swap",
+        "disk",
+        "localip",
+        "battery",
+        "poweradapter",
+        "locale",
+        "break",
+        "colors"
+    ]
+}

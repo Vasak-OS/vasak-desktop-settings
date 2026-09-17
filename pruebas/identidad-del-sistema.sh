@@ -34,6 +34,10 @@ nota(){ printf '  \033[33m·\033[0m %s\n' "$1"; }
 
 OSRELEASE=etc/os-release
 RELEASE=etc/vasakos/vasakos-release
+# `DIBUJO` y no `LOGO`: más abajo se hace `. ./etc/os-release`, que define
+# `LOGO=vasakos` y se llevaría puesto el camino. Lo encontró esta misma prueba.
+DIBUJO=usr/share/fastfetch/logos/vasakos.txt
+FASTFETCH=etc/fastfetch/config.jsonc
 # Los dos viven en el repositorio PKGBUILDS, que no siempre está al lado. Desde
 # el `check()` llegan por variable, porque ahí este repo está en `$srcdir`.
 PKGBUILD=${VSK_PKGBUILD:-"../PKGBUILDS/vasak-desktop-settings-git/PKGBUILD"}
@@ -121,15 +125,21 @@ printf '\n  \033[1mEl PKGBUILD\033[0m\n'
 if [ ! -f "$PKGBUILD" ]; then
     nota "no está $PKGBUILD: se saltea (vive en el repositorio PKGBUILDS)"
 else
+    # `package()` instala de dos maneras: los de `etc/` uno por uno —con el
+    # destino escrito— y todo `usr/` de una, con un `cp -r`. Las dos cuentan.
+    lo_instala() {
+        grep -qF "\$pkgdir/$1" "$PKGBUILD" && return 0
+        case $1 in
+            usr/*) grep -qF 'cp -r $srcdir/$pkgname/usr $pkgdir/' "$PKGBUILD" ;;
+            *) return 1 ;;
+        esac
+    }
+
     antes=$fallos
-    for archivo in $OSRELEASE $RELEASE; do
-        # `package()` copia archivo por archivo. Se busca el destino, que es lo
-        # que decide si el archivo llega al equipo.
-        if ! grep -qF "\$pkgdir/$archivo" "$PKGBUILD"; then
-            mal "package() no instala $archivo"
-        fi
+    for archivo in $OSRELEASE $RELEASE $DIBUJO $FASTFETCH; do
+        lo_instala "$archivo" || mal "package() no instala $archivo"
     done
-    [ $fallos -eq $antes ] && ok "package() instala los dos archivos"
+    [ $fallos -eq $antes ] && ok "package() instala los cuatro archivos"
 
     # Sin esto, actualizar en un equipo que ya tiene /etc/os-release sin dueño
     # corta la transacción entera. Medido: pacman contesta «exists in
@@ -208,6 +218,69 @@ else
         grep -qF -- "$linea" "$INSTALL" || mal "el .install ya no tiene: $linea"
     done
     [ $fallos -eq $antes ] && ok "las tres líneas copiadas siguen siendo las del .install"
+fi
+
+# ── El logo ──────────────────────────────────────────────────────────────────
+printf '\n  \033[1mEl logo en la terminal\033[0m\n'
+
+# `fastfetch` dibujaba el de Arch. No por un error: sus logos van compilados
+# adentro del binario, no conoce ninguno llamado «vasakos» y cae por
+# `ID_LIKE=arch`, que es lo que el formato manda hacer. El propio entra por
+# configuración, y eso trae dos cosas que se rompen calladas.
+if [ ! -f $DIBUJO ]; then
+    mal "no está $DIBUJO"
+else
+    # Cuarenta columnas es el ancho del logo de Arch, que es contra el que se
+    # dibujó éste. Más ancho empuja los datos fuera de una terminal de 80.
+    ancho=$(sed 's/\$[0-9]//g' $DIBUJO | awk '{ if (length($0) > m) m = length($0) } END { print m+0 }')
+    if [ "$ancho" -gt 0 ] && [ "$ancho" -le 40 ]; then
+        ok "el dibujo entra en $ancho columnas"
+    else
+        mal "el dibujo mide $ancho columnas y el límite es 40"
+    fi
+fi
+
+if [ ! -f $FASTFETCH ]; then
+    mal "no está $FASTFETCH"
+else
+    fuente=$(sed -n 's/.*"source"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' $FASTFETCH)
+    if [ "$fuente" = "$(basename $DIBUJO)" ]; then
+        ok "la configuración apunta a $fuente"
+    else
+        mal "la configuración apunta a «$fuente» y el dibujo se llama $(basename $DIBUJO)"
+    fi
+
+    # El color del logo y el `ANSI_COLOR` de os-release son el mismo dato en dos
+    # archivos: el color con el que el sistema se presenta.
+    colorlogo=$(sed -n 's/.*"color"[[:space:]]*:[[:space:]]*{[[:space:]]*"1"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' $FASTFETCH)
+    if [ "$colorlogo" = "${ANSI_COLOR:-}" ]; then
+        ok "el logo usa el mismo color que ANSI_COLOR ($colorlogo)"
+    else
+        mal "el logo va en «$colorlogo» y ANSI_COLOR es «${ANSI_COLOR:-}»"
+    fi
+
+    # La lista de módulos tiene que estar entera: un archivo de configuración
+    # **reemplaza** lo que fastfetch trae por omisión, así que con sólo el bloque
+    # del logo `fastfetch` dibuja el lince y no informa nada. La copia se separa
+    # sola cuando fastfetch agrega un módulo, y eso no falla en ningún lado: el
+    # fetch simplemente deja de mostrar un dato y nadie lo nota.
+    nuestros=$(sed -n '/"modules"[[:space:]]*:[[:space:]]*\[/,/^[[:space:]]*\]/p' $FASTFETCH \
+        | sed -n 's/^[[:space:]]*"\([a-z]*\)",\{0,1\}[[:space:]]*$/\1/p' | paste -sd: -)
+    if [ -z "$nuestros" ]; then
+        mal "no se pudo leer la lista de módulos de $FASTFETCH"
+    elif ! command -v fastfetch >/dev/null 2>&1; then
+        nota "sin fastfetch instalado no se puede comparar la lista de módulos"
+    else
+        suyos=$(fastfetch --print-structure | tr 'A-Z' 'a-z')
+        if [ "$nuestros" = "$suyos" ]; then
+            ok "la lista de módulos es la misma que trae fastfetch"
+        else
+            mal "la lista de módulos se separó de la de fastfetch:"
+            mal "  nuestra  $nuestros"
+            mal "  la suya  $suyos"
+            mal "  se rehace con: fastfetch --gen-config -"
+        fi
+    fi
 fi
 
 printf '\n'
