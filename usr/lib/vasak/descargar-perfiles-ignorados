@@ -1,0 +1,58 @@
+#!/bin/sh
+# Descarga del kernel los perfiles que dejamos de instalar.
+#
+# Borrar el archivo de /etc/apparmor.d **no descarga nada**: el perfil sigue
+# cargado y sigue anotando hasta que alguien lo saque o se reinicie. Medido en
+# el equipo donde se hizo el cambio: `aa-install` informó «Removed 4 stale
+# files» y dos minutos después `git` había escrito 1597 líneas más.
+#
+# Para una instalación nueva no hace falta —si el archivo no está, nada lo
+# carga al arrancar— pero para una que se actualiza sí: sin esto la mejora no
+# llega hasta el siguiente reinicio.
+#
+# ── Por qué no `aa-remove-unknown` ───────────────────────────────────────────
+#
+# Esa herramienta descarga **todo** perfil cargado que no tenga archivo en
+# /etc/apparmor.d, y hay perfiles que se cargan solos en marcha y nunca tuvieron
+# archivo: `docker-default` es el caso claro, y sacarlo deja a los contenedores
+# sin confinar. Acá se sacan por nombre, exactamente los que decidimos no
+# instalar, leídos de la misma lista que usa `aa-install`.
+#
+# Los hijos se van con el padre: sacar `containerd-shim-runc-v2` se lleva
+# también sus `//null-/usr/bin/runc`.
+set -u
+
+# Las tres rutas se pueden cambiar por entorno para poder probar esto sin
+# AppArmor y sin root: la prueba arma un `profiles` de mentira y mira qué
+# nombres se habrían escrito. Sin las variables, son las de verdad.
+CARGADOS=${VSK_PERFILES_CARGADOS:-/sys/kernel/security/apparmor/profiles}
+REMOVER=${VSK_PERFILES_REMOVER:-/sys/kernel/security/apparmor/.remove}
+LISTAS=${VSK_IGNORE_D:-/etc/apparmor/ignore.d}
+
+# Sin AppArmor activo, o sin permiso, no hay nada que hacer y no es un error.
+[ -r "$CARGADOS" ] || exit 0
+[ -w "$REMOVER" ] || exit 0
+
+for lista in "$LISTAS"/*.conf; do
+    [ -f "$lista" ] || continue
+
+    while IFS= read -r linea || [ -n "$linea" ]; do
+        # El formato de la lista es un perfil por línea, con comentarios «#».
+        # Una línea con «/» es un directorio del árbol de fuentes, no un perfil.
+        case "$linea" in
+            ''|'#'*|*' '*|*/*) continue ;;
+        esac
+
+        # El archivo del kernel es «<nombre> (<modo>)». Se compara el nombre
+        # entero y no un prefijo: `git` no tiene que llevarse `gitstatusd`.
+        if awk -v p="$linea" '$1 == p { hallado = 1 } END { exit !hallado }' "$CARGADOS"; then
+            # `>>` y no `>`: cada escritura es una orden independiente al kernel,
+            # no un archivo que se reescribe. Sobre el archivo de AppArmor da lo
+            # mismo —ignora el desplazamiento— pero contra cualquier otro
+            # destino, el de la prueba incluido, `>` dejaría sólo el último.
+            printf '%s' "$linea" >> "$REMOVER" 2>/dev/null || true
+        fi
+    done < "$lista"
+done
+
+exit 0

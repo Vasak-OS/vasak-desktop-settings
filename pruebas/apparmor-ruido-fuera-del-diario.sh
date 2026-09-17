@@ -105,9 +105,92 @@ if [ -f "$PKGBUILD" ]; then
             mal "$archivo está en el repo pero package() no lo copia"
         fi
     done
+    # El descargador y su hook viajan en el `cp -r usr` entero, no archivo por
+    # archivo. Si alguien pasara ese árbol a copiarse pieza por pieza —que es lo
+    # que ya pasó con `etc/`— habría que nombrarlos, y esto lo avisa.
+    if grep -qE 'cp -r .*\$pkgname/usr ' "$PKGBUILD"; then
+        ok 'y el árbol usr/ entero, donde viajan el descargador y su hook'
+    else
+        mal 'usr/ ya no se copia entero: hay que nombrar el descargador y su hook'
+    fi
 else
     nota "sin $PKGBUILD a mano, no se comprueba que el paquete los instale"
 fi
+
+# ── Que lo que se deja de instalar se descargue del kernel ───────────────────
+#
+# Borrar el archivo de /etc/apparmor.d no descarga el perfil: sigue cargado y
+# sigue anotando hasta el siguiente reinicio. Medido: `aa-install` dijo «Removed
+# 4 stale files» y dos minutos después `git` había escrito 1597 líneas más.
+
+DESCARGAR=usr/lib/vasak/descargar-perfiles-ignorados
+HOOK=usr/share/libalpm/hooks/zz-vasak-apparmor-ignorados.hook
+
+if [ -x "$DESCARGAR" ]; then
+    ok 'el descargador está y es ejecutable'
+else
+    mal "falta $DESCARGAR, o no tiene permiso de ejecución"
+fi
+
+# Pacman ordena los hooks por nombre de archivo. `apparmor.hook` —el que borra
+# los archivos— tiene que correr antes que éste, o no habría nada que descargar.
+if [ -f "$HOOK" ]; then
+    if [ "$(printf '%s\napparmor.hook\n' "$(basename "$HOOK")" | LC_ALL=C sort | tail -1)" = "$(basename "$HOOK")" ]; then
+        ok 'y su hook corre después de apparmor.hook, que es el que borra los archivos'
+    else
+        mal 'el hook ordena antes que apparmor.hook: correría sin nada que descargar'
+    fi
+else
+    mal "falta $HOOK"
+fi
+
+# Lo que de verdad importa: que saque los que están en la lista, que no toque
+# nada más —`docker-default` se carga solo en marcha y sacarlo dejaría a los
+# contenedores sin confinar— y que `git` no se lleve puesto a `gitstatusd`.
+banco=$(mktemp -d)
+mkdir -p "$banco/ignore.d"
+cp "$IGNORE" "$banco/ignore.d/"
+cat > "$banco/perfiles" <<'FIN'
+git (complain)
+gitstatusd (complain)
+dockerd (complain)
+containerd-shim-runc-v2 (complain)
+containerd-shim-runc-v2//null-/usr/bin/runc (complain)
+docker-default (enforce)
+plocate (enforce)
+vasak-keyring (complain)
+FIN
+: > "$banco/removidos"
+
+VSK_PERFILES_CARGADOS="$banco/perfiles" \
+VSK_PERFILES_REMOVER="$banco/removidos" \
+VSK_IGNORE_D="$banco/ignore.d" \
+    ./"$DESCARGAR"
+
+# El archivo `.remove` del kernel recibe un nombre por escritura, sin salto de
+# línea; acá se concatenan, así que se comprueba por contenido.
+removidos=$(cat "$banco/removidos")
+faltaron=()
+for perfil in "${RUIDOSOS[@]}"; do
+    case "$removidos" in *"$perfil"*) ;; *) faltaron+=("$perfil") ;; esac
+done
+if [ ${#faltaron[@]} -eq 0 ]; then
+    ok 'descarga los cuatro que están en la lista'
+else
+    mal "no descargó: ${faltaron[*]}"
+fi
+
+intocables=()
+for perfil in docker-default plocate vasak-keyring; do
+    case "$removidos" in *"$perfil"*) intocables+=("$perfil") ;; esac
+done
+if [ ${#intocables[@]} -eq 0 ]; then
+    ok 'y no toca los que no están en la lista, ni los que se cargan solos'
+else
+    mal "descargó de más: ${intocables[*]}"
+fi
+
+rm -rf "$banco"
 
 # ── Contra el sistema, si está ───────────────────────────────────────────────
 #
@@ -115,7 +198,12 @@ fi
 # el archivo, que es lo único que no se puede saber leyéndolo.
 
 if command -v aa-install >/dev/null 2>&1 && [ -f "/etc/apparmor/ignore.d/$(basename "$IGNORE")" ]; then
-    if aa-install --status 2>/dev/null | grep -q "$(basename "$IGNORE")"; then
+    # Dos cosas: `aa-install` escribe el estado en **stderr**, y se guarda antes
+    # de mirarlo porque con `pipefail` un `grep -q` le cierra el pipe en la
+    # primera coincidencia y `aa-install` muere con SIGPIPE — o sea que la
+    # comprobación fallaba justo cuando encontraba lo que buscaba.
+    estado=$(aa-install --status 2>&1)
+    if printf '%s\n' "$estado" | grep -q "$(basename "$IGNORE")"; then
         ok 'y aa-install en este equipo lo está leyendo'
     else
         mal 'aa-install no lo lista entre sus ignore.d'

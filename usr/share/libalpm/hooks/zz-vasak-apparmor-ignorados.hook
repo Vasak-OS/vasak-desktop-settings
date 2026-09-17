@@ -1,0 +1,21 @@
+# Que un perfil que dejamos de instalar deje también de estar cargado.
+#
+# `apparmor.hook`, del paquete apparmor.d, corre `aa-install --install` y borra
+# de /etc/apparmor.d los perfiles que pasaron a estar ignorados. Pero borrar el
+# archivo no descarga el perfil del kernel: sigue cargado y sigue anotando hasta
+# el siguiente reinicio.
+#
+# El nombre empieza con «zz» para correr después: pacman ordena los hooks por
+# nombre de archivo, y «apparmor.hook» va después de los que empiezan con dígito
+# pero antes que éste.
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Target = *
+
+[Action]
+Description = Descargando los perfiles de AppArmor que ya no se instalan...
+When = PostTransaction
+Exec = /usr/lib/vasak/descargar-perfiles-ignorados
