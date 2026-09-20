@@ -108,6 +108,47 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+tema 'Cada atajo llama a algo que existe'
+
+# Un `command_` que nombra un programa que no está no falla: se aprieta la tecla
+# y no pasa nada, sin registro ni aviso. Es lo que pasaba con la búsqueda antes
+# de que existiera Prism — no había atajo ninguno y sólo se podía abrir con
+# `dbus-send`, así que no la usaba nadie.
+#
+# No se exige que el programa esté instalado: este repositorio se edita en
+# equipos donde el paquete todavía no se compiló. Lo que se exige es que el
+# atajo tenga su comando y el comando su atajo.
+#
+# Sólo dentro de `[command]`: otros plugins usan `binding_` para lo suyo —los
+# `binding_up` de `[vswitch]` mueven la ventana de escritorio— y ésos no llevan
+# ningún `command_`.
+seccion_command=$(sed -n '/^\[command\]/,/^\[/p' "$INI")
+
+while IFS= read -r nombre; do
+    if printf '%s' "$seccion_command" | grep -q "^command_${nombre}[[:space:]]*="; then
+        ok "binding_${nombre} tiene su comando"
+    else
+        mal "binding_${nombre} no tiene command_${nombre}: la tecla no hace nada"
+    fi
+done < <(printf '%s' "$seccion_command" | grep -oP '^(?:repeatable_)?binding_\K[a-z_]+(?=[[:space:]]*=)' | sort -u)
+
+while IFS= read -r nombre; do
+    if printf '%s' "$seccion_command" | grep -qE "^(repeatable_)?binding_${nombre}[[:space:]]*="; then
+        ok "command_${nombre} tiene su atajo"
+    else
+        mal "command_${nombre} no tiene binding: no hay forma de dispararlo"
+    fi
+done < <(printf '%s' "$seccion_command" | grep -oP '^command_\K[a-z_]+(?=[[:space:]]*=)' | sort -u)
+
+# Y el del lanzador, que es el que acaba de entrar: `--toggle` es lo que le
+# habla al daemon en vez de levantar otro proceso con su WebView.
+if grep -qE '^command_search[[:space:]]*=[[:space:]]*vasak-prism --toggle$' "$INI"; then
+    ok 'el lanzador se abre hablándole al daemon'
+else
+    mal 'command_search tiene que ser «vasak-prism --toggle»: sin --toggle levanta un proceso nuevo por cada tecla'
+fi
+
+# ---------------------------------------------------------------------------
 tema 'El escritorio no se lanza dos veces'
 
 # `vasak-desktop` lo arranca `vasak-desktop.service`, no este `[autostart]`.
