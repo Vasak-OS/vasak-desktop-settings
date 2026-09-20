@@ -1,6 +1,18 @@
 #!/bin/bash
 
-export XDG_CURRENT_DESKTOP=Vasak
+# Los dos nombres, y sin pisar lo que ya viene puesto.
+#
+# `wayland-sessions/vasak.desktop` declara `DesktopNames=Vasak;wlroots`, y el
+# gestor de sesión los respeta: arma `XDG_CURRENT_DESKTOP=Vasak:wlroots`. Acá
+# había un `=Vasak` a secas que lo pisaba y se llevaba puesto `wlroots`, sin
+# ningún síntoma: cualquier `.desktop` con `OnlyShowIn=wlroots;` desaparecía del
+# menú y del lanzador —no fallaba, simplemente no estaba—, y cualquier programa
+# que mire ese nombre para saber si está sobre un compositor wlroots concluía
+# que no.
+#
+# De ese valor dependen además el archivo de configuración del portal y la
+# detección del tema en GTK y Qt.
+export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-Vasak:wlroots}"
 export DESKTOP_SESSION=vasak
 export XDG_SESSION_DESKTOP=vasak
 export XDG_SESSION_TYPE=wayland
@@ -87,4 +99,10 @@ fi
 # user unit hierarchy: correct environment propagation (via `uwsm finalize` in
 # wayfire.ini), supervised graphical-session daemons, and clean teardown at
 # logout. NOTE: verify the flags against the installed uwsm version.
-exec uwsm start -D Vasak wayfire
+#
+# `-D` lleva los dos nombres, igual que la variable. Por omisión uwsm **suma**
+# los que recibe a lo que ya haya (`-a`), así que con la variable bien puesta
+# `-D Vasak` no borraba nada; pero entonces el archivo decía dos cosas
+# distintas en dos líneas, y cuál gana dependía de un valor por omisión de uwsm
+# que ninguna de las dos líneas nombra.
+exec uwsm start -D Vasak:wlroots wayfire
