@@ -21,8 +21,10 @@ ellos en Configuración, pero esas decisiones **no se hacían cumplir**: su prop
 `is_enforceable()` sólo devuelve verdadero para las cuentas online. Quien reparte
 esos recursos es PipeWire, y no consulta la política.
 
-Desde entonces se cubrió una de las dos puertas —la del portal, ver abajo—, y la
-de PipeWire sigue abierta, que es de lo que trata el resto de este documento.
+Desde entonces se cubrieron las dos: la del portal, y la de PipeWire con la
+etapa 2. De lo que trata el resto de este documento es de cómo, de qué sigue
+sin cubrir —el micrófono, y quien elija el socket privilegiado— y de las
+conclusiones equivocadas que hubo en el medio.
 
 ## Lo que ya está hecho
 
@@ -77,11 +79,25 @@ dónde entró. Es el único discriminador confiable que ofrece PipeWire.
   drop-in sólo *añaden* a `context.modules`, y el módulo de protocolo no se
   puede cargar dos veces: el daemon aborta y el equipo se queda sin audio.
 
-## La etapa 2, que ya se puede escribir
+## La etapa 2, escrita
 
-Un **gestor de permisos propio**: `access.permission-managers` con reglas por
-objeto, más `access.rules` que se lo asigne a los clientes según su
-`pipewire.sec.socket`. La forma se ve en `find-config-access.lua`:
+Está en el paquete, en dos archivos que **no sirven de a uno**:
+
+- `usr/share/wireplumber/wireplumber.conf.d/50-vasak-camara.conf` — la cámara
+  deja de ofrecerse a quien entra por `pipewire-0`.
+- `usr/lib/systemd/user/xdg-desktop-portal.service.d/50-vasak-pipewire-priv.conf`
+  — manda el portal por `pipewire-0-priv`, para que pueda conceder.
+
+Sin el segundo, el primero deja la cámara cerrada **también para el portal** y
+el permiso queda bloqueado sin forma de desbloquearlo. Medido quitando el
+drop-in: el portal cae en `pipewire-0`, se restringe con todos los demás y
+`IsCameraPresent` pasa a `false`. Lo comprueba
+`pruebas/camara-solo-por-el-portal.sh`, que exige los dos y mira los dos lados.
+
+Lo que hay debajo es un **gestor de permisos propio**:
+`access.permission-managers` con reglas por objeto, más `access.rules` que se lo
+asigne a los clientes según su `pipewire.sec.socket`. La forma se ve en
+`find-config-access.lua`:
 
     access.permission-managers = [
       { name = "...", default_permissions = "...", rules = <reglas> }
@@ -181,17 +197,28 @@ emparejando por `pipewire.sec.socket = "pipewire-0"`:
 
 | | resultado |
 |---|---|
-| objetos de video visibles para un cliente por `pipewire-0` | ocultos en 92 de 100 |
+| video oculto a un cliente por `pipewire-0` | 92 de 100, y ver el aviso de abajo |
 | ídem para el gestor, por `pipewire-0-manager` | los ve todos, como corresponde |
-| **capturar de verdad, restringido** | **0 de 20 intentos** |
+| **capturar de verdad, restringido** | **0 de 100 intentos** |
 | capturar sin la regla | 5 de 5 |
 
-Queda una carrera: en 8 de cada 100 arranques el cliente alcanza a ver los
-objetos en el registro antes de que le lleguen los permisos. **Se los retiran
-enseguida** —medido con `pw-dump -m`: de 25 corridas, 9 los vieron y las 9 los
-perdieron después— y la ventana nunca alcanzó para negociar un flujo. Que no
-haya alcanzado en 20 intentos no prueba que no pueda alcanzar nunca: es un fallo
-de upstream que conviene que se arregle, no un agujero por el que hoy se pase.
+Queda una carrera: el cliente alcanza a ver los objetos en el registro antes de
+que le lleguen los permisos. **Se los retiran enseguida** —medido con
+`pw-dump -m`: de 25 corridas, 9 los vieron y las 9 los perdieron después— y la
+ventana nunca alcanzó para negociar un flujo.
+
+⚠ **Cuánto pasa depende de la carga del equipo, y mucho.** La primera medición
+dio 8 de cada 100 y quedó escrita acá como si fuera una constante; medida otra
+vez con el equipo más ocupado dio 45 de cada 100. No es una propiedad de la
+regla —dos reglas distintas, la precisa y la amplia, miden igual alternadas—:
+es la carrera, que se ensancha cuando el equipo tiene que hacer otras cosas.
+Cualquier cifra sola de acá es del momento en que se tomó.
+
+Capturar, en cambio, no funcionó **ni una vez en 100 intentos**, repartidos
+entre las tres configuraciones probadas y con el equipo cargado a propósito en
+40 de ellos. Que no haya alcanzado en 100 no prueba que no pueda alcanzar
+nunca: es un fallo de upstream que conviene que se arregle, no un agujero por el
+que hoy se pase.
 
 ### Reportado upstream, y cómo terminó
 
@@ -221,6 +248,44 @@ carga del equipo no se le cargue a una de las dos condiciones—:
 Peor en cuatro bloques de cinco y empate en el quinto. Con el parche puesto,
 capturar restringido siguió siendo 0 de 20: la fuga es de visibilidad, no de
 acceso. No hay motivo para adelantarlo ni para esperarlo.
+
+### El techo de este diseño, que conviene saber antes de confiar en él
+
+Tres cosas que la etapa 2 **no** cierra. Ninguna es un descuido; las tres son el
+límite de lo que se puede hacer con configuración.
+
+**1. No impide elegir la otra puerta.** Los sockets de PipeWire son
+`srw-rw-rw-`, los tres. Un proceso del usuario que ponga
+`PIPEWIRE_REMOTE=pipewire-0-priv` entra por el privilegiado y ve la cámara.
+`pipewire.sec.socket` dice de forma confiable **por dónde entró** un cliente —lo
+fija el servidor desde las credenciales de la conexión— pero no le impide
+**elegir por dónde entrar**, y eso es lo que haría falta.
+
+Para los AppImage esa puerta la cierra `etc/apparmor.d/vasak-appimage`, que
+niega `pipewire-0-priv` y `pipewire-0-manager` y deja el normal, por donde va
+también el sonido. Para lo que no tiene perfil, no hay con qué cerrarla.
+
+Cerrarla de verdad pide el único discriminador que el cliente no puede ni
+falsear ni elegir: `pipewire.sec.pid`, resuelto contra `/proc/<pid>/exe` y
+consultado contra `vasak-permissions`. El Lua de WirePlumber no tiene `io`, así
+que eso es un módulo en C. Es la misma forma que terminó tomando el control de
+la pantalla —`permisos-globales` saca el pid del `wl_client` por esta misma
+razón—, y es la etapa 3.
+
+**2. No cubre el micrófono**, y no por falta de ganas. No existe portal de
+micrófono: ocultar `Audio/Source` dejaría sin micrófono a todo el escritorio sin
+ningún camino para concederlo, que es exactamente lo que la regla del escritorio
+—todo lo que se bloquea se tiene que poder desbloquear— prohíbe. Va con el
+módulo del punto 1, que sí puede conceder por aplicación.
+
+**3. No cierra `/dev/video0`.** Quien abra el dispositivo a mano no pasa por
+PipeWire. Sigue siendo cosa de AppArmor, y sigue alcanzando sólo a los AppImage
+de la carpeta del usuario.
+
+Lo que sí cierra: que la cámara **no esté disponible por omisión** para ninguna
+aplicación, y que el camino que queda —el portal— pregunte, anote y se pueda
+revocar después sin relanzar nada. Hasta ayer cualquier programa la tomaba sin
+pedir nada.
 
 ## La decisión de esperar, y por qué ya no corre
 
@@ -354,8 +419,9 @@ navegadores, las videollamadas y OBS, y cerrar la vía de PipeWire con el gestor
 de permisos por cliente.
 
 Eso era «esperar a que WirePlumber aplique los permisos». **Ya los aplica** —
-nunca dejó de hacerlo—, así que del camino 1 no queda espera: queda escribir la
-etapa 2 con la regla por `pipewire.sec.socket`, que está medida más arriba.
+nunca dejó de hacerlo—, así que del camino 1 no quedó espera ni queda trabajo:
+la etapa 2 está escrita y en el paquete. Lo que queda es la etapa 3, el módulo
+que resuelve `pipewire.sec.pid`, y está acotada en «El techo de este diseño».
 
 La corrección del `app_id` **no cambia esta decisión**, y conviene decirlo
 porque invita a pensar lo contrario: que el portal ahora recuerde y revoque no

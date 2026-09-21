@@ -36,15 +36,20 @@
 # reproducción.
 #
 # Lo que sí cierra este perfil es la vía de atrás: la aplicación que se saltea
-# PipeWire y abre el dispositivo directamente. Hoy esa vía no tiene ningún
-# control, así que el perfil es una mejora real aunque parcial.
+# PipeWire y abre el dispositivo directamente.
 #
-# Cerrar la vía de PipeWire necesita otra pieza: un segundo socket con permisos
-# restringidos —`sockets` en libpipewire-module-protocol-native y
-# `access.socket` en libpipewire-module-access—, negando acá el normal y
-# permitiendo el restringido. Eso queda pendiente porque un cliente restringido
-# se queda esperando a que alguien le conceda permisos, y ese alguien todavía no
-# existe.
+# La vía de PipeWire ya está cerrada, y salió al revés de como se planeó acá.
+# El plan era negar el socket normal y permitir uno restringido; lo que hay es
+# el socket normal **ya restringido** —`50-vasak-camara.conf` no ofrece la
+# cámara a quien entra por `pipewire-0`— y por eso acá se niegan los otros dos,
+# que no lo están. Negar el normal habría dejado a la aplicación además sin
+# sonido, que era el problema de aquel plan.
+#
+# «Un cliente restringido se queda esperando a que alguien le conceda permisos,
+# y ese alguien todavía no existe»: ya existe. Es `xdg-desktop-portal`, que
+# pregunta por el backend de VasakOS y anota en `vasak-permissions`, y a quien
+# `50-vasak-pipewire-priv.conf` manda por el socket privilegiado justamente
+# para que pueda conceder.
 #
 # ── A qué se engancha ───────────────────────────────────────────────────────
 #
@@ -102,6 +107,22 @@ profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage {
   # ALSA terminan en `c` (pcmC0D0c) y los de reproducción en `p`. Negar
   # /dev/snd/* entero dejaría a la aplicación muda, que no es lo que se decidió.
   audit deny /dev/snd/pcmC*D*c rwk,
+
+  # Y la cámara por la vía de PipeWire, que es la que usan las aplicaciones
+  # modernas. No se niega el socket normal —por ahí va también el sonido, y
+  # negarlo dejaría a la aplicación muda—: sobre `pipewire-0` ya no se ofrece la
+  # cámara, lo hace `50-vasak-camara.conf`. Lo que se niega son los otros dos
+  # sockets, que no están restringidos y son `srw-rw-rw-` como todos:
+  #
+  #   · `-priv`, por donde el portal entra para poder conceder;
+  #   · `-manager`, por donde entra WirePlumber y se ve todo.
+  #
+  # Sin estas dos líneas alcanzaba con `PIPEWIRE_REMOTE=pipewire-0-priv` para
+  # entrar por la puerta de al lado. El socket dice de forma confiable por dónde
+  # entró un cliente, pero no le impide elegir por dónde entrar; acá se le
+  # impide.
+  audit deny /run/user/*/pipewire-0-priv rw,
+  audit deny /run/user/*/pipewire-0-manager rw,
 
   # ── Lo que prueba quién sos ─────────────────────────────────────────────
   #
