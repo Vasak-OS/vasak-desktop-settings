@@ -234,20 +234,49 @@ que preactiva los gestores al cargar los scripts de acceso.
 Ese «sólo la primera vez» es lo que destapó todo: si a la segunda funcionaba,
 entonces el mecanismo aplicaba y lo que estaba mal era la medición.
 
-**El parche no hace falta y, medido, empeora.** Son seis scripts Lua y las APIs
-que usa (`Script.async_activation`, `finish_activation`) ya existen en 0.5.17,
-así que se prueba copiándolos a `~/.local/share/wireplumber/scripts/client/` sin
-recompilar nada. En un experimento alternado de cinco bloques —para que la
-carga del equipo no se le cargue a una de las dos condiciones—:
+**El parche no hace falta para esto**, porque el mecanismo ya aplica sin él.
+Son seis scripts Lua y las APIs que usa (`Script.async_activation`,
+`finish_activation`) ya existen en 0.5.17, así que se prueba copiándolos a
+`~/.local/share/wireplumber/scripts/client/` sin recompilar nada.
 
-| | fugas de visibilidad por 100 |
-|---|---|
-| 0.5.17 de fábrica | **8** |
-| con !900 | **25** |
+#### Y la medición de que además empeoraba, que era del banco de pruebas
 
-Peor en cuatro bloques de cinco y empate en el quinto. Con el parche puesto,
-capturar restringido siguió siendo 0 de 20: la fuga es de visibilidad, no de
-acceso. No hay motivo para adelantarlo ni para esperarlo.
+Acá decía que el parche **empeoraba** la carrera —8 fugas por 100 sin él contra
+25 con él, en un experimento alternado por bloques— y se le reportó a upstream.
+Es falso, y el error vale más que el número.
+
+El banco sondeaba **apenas los dispositivos terminaban de enumerarse**, y esa
+espera se medía por el socket del gestor, que no está restringido y no sabe
+nada del subsistema de acceso. Con !900 los scripts `find-*-access` registran
+su hook **recién cuando terminan de activar los gestores de permisos**, o sea
+que hay una ventana después de cada reinicio de WirePlumber que **existe sólo
+con el parche** — y la sonda caía justo ahí.
+
+Remedido en el mismo equipo, alternando por bloques, separando las dos
+ventanas:
+
+| cuándo se sondea | 0.5.17 de fábrica | con !900 |
+|---|---|---|
+| apenas enumerados los dispositivos | 10 / 50 | **27 / 50** |
+| 30 s después del reinicio | 22 / 50 | **20 / 50** |
+
+En estado estable **no hay diferencia**. Lo único real que muestra el número
+viejo es esa ventana de arranque, y la carrera que importa es por conexión de
+cliente, no por arranque del daemon.
+
+Se retiró ante upstream. La lección de método está abajo, en «Cómo medir esto
+sin engañarse», y es la misma de siempre: la sonda no vio nada no es lo mismo
+que no hay nada.
+
+#### Cuánto dura la ventana
+
+Medida con `pw-dump -m` en estado estable, cronometrando el `added` y el
+`removed` del mismo objeto: **2 y 4 ms** en las dos corridas de diez que
+fugaron. Eso explica que capturar no funcionara nunca: negociar un flujo pide
+más vueltas de las que dura la ventana.
+
+Y cuánto se nota depende del cliente: `pw-cli ls Node` fuga en torno al 40% de
+las corridas en este equipo, `pw-dump -m` en 2 de 10.
 
 ### El techo de este diseño, que conviene saber antes de confiar en él
 
@@ -482,7 +511,16 @@ El `videoconvert` no es decorativo: sin él la tubería no negocia formato y fal
 con «target not found» aunque el permiso esté concedido, que es un falso
 positivo de bloqueo.
 
-La tercera es la carrera: la fuga aparece en una corrida de cada doce y depende
-de la carga del equipo. Una tanda de veinte no distingue nada. Para comparar dos
+La tercera es la carrera: la fuga depende de la carga del equipo y va de 8 a 45
+de cada 100. Una tanda de veinte no distingue nada. Para comparar dos
 configuraciones hay que **alternarlas por bloques**, o la que se midió con el
 equipo más ocupado sale peor por eso y no por lo que se está probando.
+
+Y la cuarta, que se llevó puesto un reporte a upstream: **esperar a que los
+dispositivos aparezcan no es esperar a que el subsistema de acceso esté listo**.
+Se enumeran antes, y encima esa espera se suele mirar por el socket del gestor,
+que no está restringido y no sabe nada de los permisos. Hay configuraciones
+—!900 es una— que registran sus hooks recién al terminar de activarse, así que
+sondear temprano les inventa una regresión que en estado estable no existe.
+Reiniciar, esperar **30 s**, y recién entonces medir. Si se quiere medir la
+ventana de arranque, que sea a propósito y dicho.
