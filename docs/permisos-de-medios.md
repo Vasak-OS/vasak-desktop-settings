@@ -5,10 +5,14 @@ cámara, micrófono y captura de pantalla. Está escrito porque cada pieza cost�
 descubrirla y varias conclusiones intermedias fueron **equivocadas**; sin esto,
 el próximo intento las repite.
 
-Dos de esas equivocaciones estuvieron escritas acá como si fueran hechos, y las
-dos decían que algo era imposible cuando no lo era. Quedan en el texto, marcadas,
-en vez de borrarse: saber qué se creyó y por qué era falso vale más que un
-documento que parezca que siempre tuvo razón.
+Tres de esas equivocaciones estuvieron escritas acá como si fueran hechos, y
+las tres decían que algo era imposible cuando no lo era. Quedan en el texto,
+marcadas, en vez de borrarse: saber qué se creyó y por qué era falso vale más
+que un documento que parezca que siempre tuvo razón.
+
+La tercera es la más cara de las tres, porque sobre ella se decidió **esperar**:
+este documento dijo durante un mes que el gestor de permisos de WirePlumber no
+aplicaba nada. Sí aplicaba. Ver «Dónde se corta», más abajo.
 
 ## El problema
 
@@ -73,7 +77,7 @@ dónde entró. Es el único discriminador confiable que ofrece PipeWire.
   drop-in sólo *añaden* a `context.modules`, y el módulo de protocolo no se
   puede cargar dos veces: el daemon aborta y el equipo se queda sin audio.
 
-## Lo que falta (etapa 2)
+## La etapa 2, que ya se puede escribir
 
 Un **gestor de permisos propio**: `access.permission-managers` con reglas por
 objeto, más `access.rules` que se lo asigne a los clientes según su
@@ -135,46 +139,99 @@ O sea que la configuración escrita más arriba es sintácticamente correcta.
 
 ### Dónde se corta
 
-No se aplica igual, y el punto está identificado. `update_client_permissions`
-—la única función que empuja los permisos al cliente— **no se llega a ejecutar**:
-su mensaje de registro («Updating permissions on client %u: any=… len=…») no
-aparece nunca, ni con el registro de WirePlumber en nivel info.
+#### La conclusión vieja, que era falsa
 
-Esa función tiene dos guardas al principio: que el gestor tenga activa la
-característica `WP_PERMISSION_MANAGER_LOADED`, y que el proxy del cliente siga
-siendo válido. Y sin embargo el registro del subsistema de acceso sí dice
-«Attached newly activated permission manager to client», o sea que desde el otro
-lado el gestor figura como activado.
+Este documento decía que
 
-Hipótesis pendientes, en orden de probabilidad:
+> no se aplica igual, y el punto está identificado. `update_client_permissions`
+> —la única función que empuja los permisos al cliente— **no se llega a
+> ejecutar**: su mensaje de registro («Updating permissions on client %u: any=…
+> len=…») no aparece nunca, ni con el registro de WirePlumber en nivel info.
 
-1. El gestor creado desde configuración no llega a activarse de verdad, pese al
-   mensaje. Sería un fallo de WirePlumber y correspondería reportarlo.
-2. `config.permission_managers:parse(2)` de `find-config-access.lua` deja el
-   campo `rules` en una forma que `Json.Raw` no reconstruye igual, y las reglas
-   llegan vacías al gestor.
+Y de ahí salían dos hipótesis —que el gestor no se activaba de verdad, o que
+`Json.Raw` no reconstruía las reglas—, el reporte a upstream, y la decisión de
+esperar.
 
-Lo que **no** es: ni la sintaxis de la acción, ni la cadena de permisos, ni el
-nombre de las propiedades — todo eso está verificado contra el código.
+**Las tres cosas se apoyaban en una medición mal hecha.** El mecanismo funciona
+desde 0.5.17, sin ningún parche.
 
-### Reportado upstream
+#### Lo que pasaba de verdad
+
+La sonda era `pw-dump`, y `pw-dump` **no entra por donde entra una aplicación**:
+pone `remote.intention=manager`, así que el servidor le fija
+`pipewire.sec.socket = pipewire-0-manager`. Una regla escrita contra
+`pipewire-0` no lo toca nunca. El registro lo dice, pero bajito —«Found default
+PM» donde tendría que decir «Found config '…' PM»—, y es fácil leerlo como que
+el gestor se asignó y no se aplicó.
+
+Con una sonda que sí entre por `pipewire-0` —`pw-cli`, o `gst-launch-1.0` con
+`pipewiresrc`— la cadena entera se cumple y `Updating permissions on client …`
+aparece en cada conexión.
+
+⚠ Y **nunca** escribir una regla restrictiva contra `pipewire-0-manager`: por ahí
+entra WirePlumber. Se restringe a sí mismo, pierde los dispositivos y se lleva
+puesta la pila. Probado sin querer; el equipo se queda sin audio hasta reiniciar
+`pipewire pipewire-pulse wireplumber`.
+
+#### Lo medido
+
+El 21/09/2026, sobre wireplumber 0.5.17 y pipewire 1.6.8, con el socket
+privilegiado de la etapa 1 ya instalado y la configuración de más arriba
+emparejando por `pipewire.sec.socket = "pipewire-0"`:
+
+| | resultado |
+|---|---|
+| objetos de video visibles para un cliente por `pipewire-0` | ocultos en 92 de 100 |
+| ídem para el gestor, por `pipewire-0-manager` | los ve todos, como corresponde |
+| **capturar de verdad, restringido** | **0 de 20 intentos** |
+| capturar sin la regla | 5 de 5 |
+
+Queda una carrera: en 8 de cada 100 arranques el cliente alcanza a ver los
+objetos en el registro antes de que le lleguen los permisos. **Se los retiran
+enseguida** —medido con `pw-dump -m`: de 25 corridas, 9 los vieron y las 9 los
+perdieron después— y la ventana nunca alcanzó para negociar un flujo. Que no
+haya alcanzado en 20 intentos no prueba que no pueda alcanzar nunca: es un fallo
+de upstream que conviene que se arregle, no un agujero por el que hoy se pase.
+
+### Reportado upstream, y cómo terminó
 
 https://gitlab.freedesktop.org/pipewire/wireplumber/-/work_items/1006
 
-Con el caso mínimo, la evidencia del registro y la lista de lo ya descartado,
-que es la mitad del valor del reporte: le ahorra al mantenedor el camino que ya
-recorrimos.
+El reporte llevaba el caso mínimo, la evidencia del registro y la lista de lo
+descartado. La respuesta de Julian Bouzas fue que él reproducía el problema
+**sólo en el primer `pw-dump`** y que a partir del segundo los objetos ya no
+aparecían, con un arreglo en
+[!900](https://gitlab.freedesktop.org/pipewire/wireplumber/-/merge_requests/900)
+que preactiva los gestores al cargar los scripts de acceso.
 
-Mientras no haya respuesta, la vía de PipeWire sigue sin control, y la pantalla
-de Privacidad y seguridad de la configuración lo dice explícitamente en vez de
-callarlo.
+Ese «sólo la primera vez» es lo que destapó todo: si a la segunda funcionaba,
+entonces el mecanismo aplicaba y lo que estaba mal era la medición.
 
-## La decisión: se espera a WirePlumber
+**El parche no hace falta y, medido, empeora.** Son seis scripts Lua y las APIs
+que usa (`Script.async_activation`, `finish_activation`) ya existen en 0.5.17,
+así que se prueba copiándolos a `~/.local/share/wireplumber/scripts/client/` sin
+recompilar nada. En un experimento alternado de cinco bloques —para que la
+carga del equipo no se le cargue a una de las dos condiciones—:
+
+| | fugas de visibilidad por 100 |
+|---|---|
+| 0.5.17 de fábrica | **8** |
+| con !900 | **25** |
+
+Peor en cuatro bloques de cinco y empate en el quinto. Con el parche puesto,
+capturar restringido siguió siendo 0 de 20: la fuga es de visibilidad, no de
+acceso. No hay motivo para adelantarlo ni para esperarlo.
+
+## La decisión de esperar, y por qué ya no corre
 
 El issue [vasak-desktop-settings#3][3] planteaba dos caminos y una condición
 para elegir: **medir cuántos programas de los que la gente usa abren el
 dispositivo directo**. Si eran pocos, sacar el acceso directo era un permiso
 real hoy; si eran muchos, convenía esperar.
+
+Lo que sigue es ese razonamiento como se escribió. Se sostiene entero salvo en
+su conclusión, porque la espera que elegía **ya terminó**: ver «Entonces», al
+final.
 
 [3]: https://github.com/Vasak-OS/vasak-desktop-settings/issues/3
 
@@ -292,12 +349,15 @@ rompería al hacerlo: `vasak-shot` y cualquier grabador usan ese mismo camino.
 
 ### Entonces
 
-Se toma el **camino 1**: esperar a que WirePlumber aplique los permisos por
-cliente. Sacar el acceso directo hoy rompería los navegadores, las
-videollamadas y OBS, y el permiso que se ganaría a cambio ya lo cubre el portal
-para quien lo use.
+Se toma el **camino 1**: no sacar el acceso directo, porque rompería los
+navegadores, las videollamadas y OBS, y cerrar la vía de PipeWire con el gestor
+de permisos por cliente.
 
-La corrección de más arriba **no cambia esta decisión**, y conviene decirlo
+Eso era «esperar a que WirePlumber aplique los permisos». **Ya los aplica** —
+nunca dejó de hacerlo—, así que del camino 1 no queda espera: queda escribir la
+etapa 2 con la regla por `pipewire.sec.socket`, que está medida más arriba.
+
+La corrección del `app_id` **no cambia esta decisión**, y conviene decirlo
 porque invita a pensar lo contrario: que el portal ahora recuerde y revoque no
 alcanza a la aplicación que no lo usa, que es justo la que preocupa.
 
@@ -339,3 +399,24 @@ configuración daba exactamente lo mismo.
 Toda medición tiene que esperar a que el conjunto de dispositivos esté completo
 —los de audio **y** los de video— antes de contar nada, y compararse contra una
 línea base tomada con la misma espera.
+
+Y hay una segunda trampa, que costó un mes: **la sonda tiene que entrar por el
+socket que se está probando**. `pw-dump` y `wpctl` entran por
+`pipewire-0-manager`, no por `pipewire-0`, así que una regla sobre el socket de
+las aplicaciones no los alcanza y el resultado parece «no se aplica». Para
+probar `pipewire-0` va `pw-cli ls Device`, y para probar el permiso de verdad
+—que es otra cosa que la visibilidad— va un intento de capturar:
+
+```
+gst-launch-1.0 -q pipewiresrc target-object=<serial> num-buffers=1 \
+    ! videoconvert ! fakesink
+```
+
+El `videoconvert` no es decorativo: sin él la tubería no negocia formato y falla
+con «target not found» aunque el permiso esté concedido, que es un falso
+positivo de bloqueo.
+
+La tercera es la carrera: la fuga aparece en una corrida de cada doce y depende
+de la carga del equipo. Una tanda de veinte no distingue nada. Para comparar dos
+configuraciones hay que **alternarlas por bloques**, o la que se midió con el
+equipo más ocupado sale peor por eso y no por lo que se está probando.
