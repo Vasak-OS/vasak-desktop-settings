@@ -140,6 +140,70 @@ while IFS= read -r nombre; do
     fi
 done < <(printf '%s' "$seccion_command" | grep -oP '^command_\K[a-z_]+(?=[[:space:]]*=)' | sort -u)
 
+# Ningún atajo ligado a dos cosas distintas.
+#
+# Wayfire no avisa: liga el mismo combo dos veces, dispara uno —el que quede
+# primero— y el otro no anda nunca. Encontrarlo mirando el archivo es difícil
+# porque el mismo atajo se escribe de varias formas: `<super> KEY_T` y
+# `KEY_T <super>` son el mismo, y los modificadores pueden ir en cualquier orden
+# y pegados. Se normaliza antes de comparar: minúsculas, modificadores ordenados
+# y la tecla al final.
+#
+# Se comparan los combos, no los comandos: dos atajos distintos que llaman al
+# mismo programa están bien —es lo que hacen las dos combinaciones de la terminal
+# y las dos de la desplegable—; lo que no puede pasar es un combo repetido.
+declare -A DUENO=()
+repetidos=0
+while IFS= read -r linea; do
+    nombre=${linea%%=*}
+    nombre=$(printf '%s' "$nombre" | tr -d '[:space:]')
+    valor=${linea#*=}
+    # Normalizado: todo a minúsculas, los modificadores ordenados y la tecla al
+    # final, así `<ctrl> <alt> KEY_T` y `<alt><ctrl> KEY_T` son el mismo.
+    combo=$(printf '%s' "$valor" \
+        | tr 'A-Z' 'a-z' \
+        | sed 's/></> </g' \
+        | tr -s '[:space:]' '\n' \
+        | grep -v '^$' \
+        | sort \
+        | tr '\n' ' ' \
+        | sed 's/[[:space:]]*$//')
+    [ -z "$combo" ] && continue
+    if [ -n "${DUENO[$combo]:-}" ]; then
+        mal "«$valor» está ligado dos veces: $nombre y ${DUENO[$combo]}"
+        repetidos=$((repetidos + 1))
+    else
+        DUENO[$combo]=$nombre
+    fi
+done < <(printf '%s' "$seccion_command" | grep -E '^(repeatable_)?binding_[a-z_]+[[:space:]]*=')
+
+[ "$repetidos" -eq 0 ] && ok 'ningún atajo está ligado dos veces'
+
+# La terminal desplegable, que salió de F12. Se comprueban las dos
+# combinaciones por separado: la que falte deja media función sin atajo y eso no
+# lo agarra ninguna de las comprobaciones de arriba, que sólo miran que cada
+# `binding_` tenga su `command_`.
+#
+# F12 no puede volver: es la consola de media docena de juegos, el menú de
+# arranque de muchas máquinas y la captura de Steam, y además es una tecla sola
+# —la más fácil de apretar sin querer—.
+for par in 'binding_terminal_overlay:<super> <alt> KEY_T' \
+           'binding_terminal_overlay_alt:<super> <ctrl> KEY_T'; do
+    clave=${par%%:*}
+    esperado=${par##*:}
+    if printf '%s' "$seccion_command" | grep -qF "$clave = $esperado"; then
+        ok "$clave abre la desplegable con «$esperado»"
+    else
+        mal "$clave tiene que ser «$esperado»"
+    fi
+done
+
+if printf '%s' "$seccion_command" | grep -qE '^binding_terminal_overlay(_alt)?[[:space:]]*=[[:space:]]*KEY_F12[[:space:]]*$'; then
+    mal 'la desplegable volvió a F12, que es la consola de los juegos y el menú de arranque'
+else
+    ok 'la desplegable ya no usa F12'
+fi
+
 # Y el del lanzador, que es el que acaba de entrar: `--toggle` es lo que le
 # habla al daemon en vez de levantar otro proceso con su WebView.
 if grep -qE '^command_search[[:space:]]*=[[:space:]]*vasak-prism --toggle$' "$INI"; then
