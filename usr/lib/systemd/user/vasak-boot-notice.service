@@ -1,0 +1,22 @@
+# Avisa al entrar a la sesión si este arranque es una instantánea.
+#
+# Va en la sesión gráfica y no en el arranque del sistema porque lo que hace es
+# mandar una notificación al escritorio: antes de que haya sesión no hay a quién
+# avisarle, y guardar el aviso para después es peor que no darlo — llega cuando
+# la persona ya no se acuerda de qué eligió en el menú.
+[Unit]
+Description=Aviso de que se arrancó una instantánea del sistema
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/vasak/boot-notice
+# Que el escritorio no se quede sin aviso si el servicio de notificaciones
+# todavía no atendía: se reintenta un par de veces y después se deja.
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+
+[Install]
+WantedBy=graphical-session.target

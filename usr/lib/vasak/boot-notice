@@ -1,0 +1,41 @@
+#!/bin/bash
+# Avisa, una vez por sesión, que este arranque no es el sistema de siempre.
+#
+# Lo que decide está en `boot-state`; acá sólo se dice. El aviso va sin tiempo
+# de espera y con urgencia alta a propósito: es la clase de dato que sirve si se
+# lee, y que no sirve de nada tres segundos después de aparecer.
+#
+# El mensaje nombra las dos mitades que se descubren tarde: que el sistema está
+# de sólo lectura —lo que se instale ahora se pierde— y que la carpeta personal
+# **no** lo está, que es lo que hace que se pueda trabajar una tarde entera sin
+# notar dónde se está parado.
+#
+# Uso: boot-notice [estado]
+#      El argumento es para las pruebas: la salida de `boot-state`.
+set -uo pipefail
+
+ESTADO=${1:-$(/usr/lib/vasak/boot-state)}
+
+instantanea=$(sed -n 's/^instantanea=//p' <<<"$ESTADO")
+solo_lectura=$(sed -n 's/^solo_lectura=//p' <<<"$ESTADO")
+fecha=$(sed -n 's/^fecha=//p' <<<"$ESTADO")
+
+# Un arranque normal no avisa nada, que es el caso de todos los días.
+[ "$instantanea" = "no" ] && exit 0
+
+titulo="Estás en una versión anterior del sistema"
+if [ "$solo_lectura" = "si" ]; then
+    cuerpo="Arrancaste la instantánea $instantanea, del $fecha. El sistema está de sólo lectura: lo que instales o configures ahora se pierde al reiniciar, pero lo que guardes en tu carpeta personal queda. Para volver al sistema de siempre, reiniciá y elegí la primera entrada del menú."
+else
+    # `snapper rollback` deja una instantánea escribible como raíz. Ahí no se
+    # pierde nada, pero sigue siendo una versión anterior y conviene saberlo.
+    cuerpo="El sistema está andando sobre la instantánea $instantanea, del $fecha. Se puede usar y escribir con normalidad; lo que no está es lo que se haya instalado después de esa fecha."
+fi
+
+# `gdbus` y no `notify-send`: glib2 ya es dependencia de este paquete y
+# libnotify no lo es. Un aviso no justifica un paquete más.
+exec gdbus call --session \
+    --dest org.freedesktop.Notifications \
+    --object-path /org/freedesktop/Notifications \
+    --method org.freedesktop.Notifications.Notify \
+    "VasakOS" 0 "drive-harddisk" "$titulo" "$cuerpo" "[]" "{'urgency': <byte 2>}" 0

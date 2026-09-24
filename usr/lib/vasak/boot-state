@@ -1,0 +1,79 @@
+#!/bin/bash
+# Dónde está parado este arranque: en el sistema de siempre, o en una instantánea.
+#
+# ── Por qué hace falta ──────────────────────────────────────────────────────
+#
+# Desde que el menú de GRUB ofrece arrancar una instantánea, se puede estar
+# usando el escritorio **dentro de una versión anterior del sistema sin que nada
+# lo diga**. Se ve exactamente igual que el sistema de todos los días, con dos
+# diferencias que se descubren tarde:
+#
+#   · la raíz está montada de sólo lectura, así que lo que se guarde en /etc o
+#     se instale con pacman falla o se pierde al reiniciar;
+#   · lo que se guarde en /home **sí** queda, porque /home es otro subvolumen y
+#     no forma parte de la instantánea. O sea que se puede trabajar una tarde
+#     entera creyendo estar en el sistema de siempre.
+#
+# Alguien que arrancó una instantánea para ver si el problema se iba lo sabe.
+# Alguien que eligió mal una entrada del menú, no.
+#
+# ── Qué contesta ────────────────────────────────────────────────────────────
+#
+#     instantanea=42|no     el número, tal como lo nombra snapper
+#     solo_lectura=si|no
+#     fecha=2026-09-17      último día que esta raíz vio una transacción
+#
+# La fecha sale del propio `pacman.log` de esta raíz, que es lo único que dice
+# de cuándo es el sistema en el que uno está parado **sin pedir permisos**: los
+# datos de snapper viven en /.snapshots, que es de root.
+#
+# Lo que todavía no contesta es **cuál** actualización rompió el arranque. Eso
+# está en el registro de la raíz viva, que desde adentro de una instantánea no
+# está montada. Se puede sacar de la instantánea siguiente —`snap-pac` toma una
+# después de cada transacción— y eso pide leer /.snapshots, o sea root.
+#
+# Uso: boot-state [subvolumen] [pacman.log] [opciones-de-montaje]
+#      Los argumentos son para las pruebas; sin ellos se lo pregunta al sistema.
+set -uo pipefail
+
+SUBVOL=${1:-}
+LOG=${2:-/var/log/pacman.log}
+OPCIONES=${3:-}
+
+if [ -z "$SUBVOL" ]; then
+    # `findmnt` imprime la fuente con el subvolumen entre corchetes:
+    # `/dev/sda2[/@]` en un arranque normal.
+    fuente=$(findmnt -no SOURCE / 2>/dev/null || true)
+    SUBVOL=${fuente##*[}
+    SUBVOL=${SUBVOL%]}
+    [ "$SUBVOL" = "$fuente" ] && SUBVOL=""
+fi
+
+if [ -z "$OPCIONES" ]; then
+    OPCIONES=$(findmnt -no OPTIONS / 2>/dev/null || true)
+fi
+
+# El nombre que le pone snapper a lo que monta: `.snapshots/<número>/snapshot`,
+# con o sin el subvolumen raíz adelante.
+if [[ "$SUBVOL" =~ (^|/)\.snapshots/([0-9]+)/snapshot/?$ ]]; then
+    echo "instantanea=${BASH_REMATCH[2]}"
+else
+    echo "instantanea=no"
+fi
+
+# La raíz de una instantánea se monta de sólo lectura salvo que alguien la haya
+# cambiado a mano. Se contesta aparte del número porque son dos cosas
+# distintas: `snapper rollback` deja una instantánea **escribible** como raíz, y
+# ahí no hay nada que avisar.
+if [[ ",$OPCIONES," == *",ro,"* ]]; then
+    echo "solo_lectura=si"
+else
+    echo "solo_lectura=no"
+fi
+
+# La última fecha del registro de pacman de **esta** raíz.
+fecha=""
+if [ -r "$LOG" ]; then
+    fecha=$(grep -oE '^\[[0-9]{4}-[0-9]{2}-[0-9]{2}' "$LOG" | tail -1 | tr -d '[')
+fi
+echo "fecha=${fecha:-desconocida}"
