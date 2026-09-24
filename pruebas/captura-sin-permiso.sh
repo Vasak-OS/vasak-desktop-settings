@@ -23,10 +23,20 @@
 # una actualización. La única comprobación que vale es pedir el protocolo desde
 # un programa que no está en la lista y ver que no llega.
 #
-# Se usa una **copia de `grim`**: el mismo binario, en otra ruta. Si la copia
-# capturara, la restricción sería de mentira —bastaría copiar el programa para
-# saltearla— y si no captura, queda demostrado que lo que decide es quién pide y
-# no qué pide.
+# Se piden las dos formas que se saltearon esto alguna vez:
+#
+#   1. `grim` a secas. Estuvo en la lista de permitidos hasta que `vasak-shot`
+#      aprendió a tomar los píxeles por su cuenta, y mientras estuvo, la lista
+#      no cerraba nada: un script de dos líneas que lo llamara capturaba la
+#      pantalla entera.
+#   2. Un programa cualquiera que le pide a `grim` que capture por él. Es el
+#      caso que reabrió Vasak-OS/vasak-desktop-settings#7 después de darlo por
+#      cerrado, y el que dice si la lista mira algo más que el nombre del
+#      ejecutable que pide.
+#
+# Y se comprueba también la otra mitad, la que ninguna negación demuestra: que
+# la herramienta que **sí** captura siga en la lista. Sin eso, una lista vacía
+# pasaría estas pruebas en verde con el escritorio sin capturas.
 #
 # Uso: pruebas/captura-sin-permiso.sh
 set -uo pipefail
@@ -67,24 +77,28 @@ elif ! command -v grim >/dev/null 2>&1; then
 else
     taller=$(mktemp -d)
     trap 'rm -rf "$taller"' EXIT
-    cp "$(command -v grim)" "$taller/grim-copiado"
-    chmod +x "$taller/grim-copiado"
 
-    # El de /usr/bin sí está en la lista: es el que usa vasak-shot, que no toca
-    # los píxeles y lo llama a él. Si esto fallara, la lista estaría de más y el
-    # escritorio habría perdido las capturas.
-    if grim "$taller/permitida.png" >/dev/null 2>&1 && [ -s "$taller/permitida.png" ]; then
-        ok "el grim del sistema captura: la lista no rompió el escritorio"
+    # `grim` ya no está en la lista: `vasak-shot` toma los píxeles por su cuenta
+    # desde 0.7.0, así que la herramienta que capturaba en nombre de todos dejó
+    # de existir. Si esto volviera a capturar, la lista tendría otra vez adentro
+    # un programa que cualquiera puede correr.
+    salida=$(grim "$taller/negada.png" 2>&1)
+    if [ -s "$taller/negada.png" ]; then
+        mal "grim capturó $(stat -c%s "$taller/negada.png") bytes: volvió a la lista de permitidos"
     else
-        mal "el grim del sistema NO pudo capturar; la lista de permitidos dejó fuera a grim"
+        ok "grim no captura (dice: ${salida:-sin salida})"
     fi
 
-    # El mismo binario, en otra ruta. Tiene que quedarse sin el protocolo.
-    salida=$("$taller/grim-copiado" "$taller/negada.png" 2>&1)
-    if [ -s "$taller/negada.png" ]; then
-        mal "un grim copiado capturó $(stat -c%s "$taller/negada.png") bytes: la restricción se saltea copiando el binario"
+    # El caso que reabrió el issue: no hace falta hablar el protocolo, alcanza
+    # con pedirle a una herramienta permitida que lo hable. Mientras `grim`
+    # estuvo en la lista, esto capturaba.
+    printf '#!/usr/bin/env bash\ngrim "$1" 2>&1\n' > "$taller/porlacara.sh"
+    chmod +x "$taller/porlacara.sh"
+    salida=$("$taller/porlacara.sh" "$taller/porlacara.png" 2>&1)
+    if [ -s "$taller/porlacara.png" ]; then
+        mal "un programa cualquiera capturó $(stat -c%s "$taller/porlacara.png") bytes pidiéndoselo a grim"
     else
-        ok "un grim copiado no captura (dice: ${salida:-sin salida})"
+        ok "un programa que le pide la captura a grim tampoco la consigue"
     fi
 
     # Y que el protocolo directamente no se le anuncie, que es cómo funciona
@@ -98,6 +112,23 @@ else
         fi
     else
         aviso "wayland-info no está: no se comprobó qué globals se anuncian"
+    fi
+
+    # La otra mitad, que ninguna negación demuestra: que alguien siga pudiendo
+    # capturar. Con la lista vacía todo lo de arriba pasa en verde y el
+    # escritorio se queda sin capturas de pantalla, que es el modo de fallar
+    # que no se ve. Se mira la lista dentro del plugin instalado y no se corre
+    # `vasak-shot`, que abre una ventana a pantalla completa y pide una persona
+    # del otro lado.
+    plugin=/usr/lib/wayfire/libpermisos-globales.so
+    if [ ! -f "$plugin" ]; then
+        aviso "SIN COMPROBAR: no está $plugin"
+    elif ! command -v strings >/dev/null 2>&1; then
+        aviso "SIN COMPROBAR: strings no está instalado"
+    elif strings "$plugin" | grep -qx "/usr/bin/vasak-shot"; then
+        ok "la herramienta de captura del escritorio sigue en la lista"
+    else
+        mal "ninguna herramienta de captura quedó en la lista: nadie puede capturar"
     fi
 fi
 

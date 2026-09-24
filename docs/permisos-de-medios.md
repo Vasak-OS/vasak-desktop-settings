@@ -411,14 +411,12 @@ O sea que el portal cierra la puerta de las aplicaciones que se comportan, y la
 que no se comporta la tiene abierta igual. Eso es exactamente lo que un control
 por debajo —PipeWire, o AppArmor— sí puede impedir.
 
-#### Y la pantalla tiene la misma puerta de atrás
+#### La pantalla tenía la misma puerta de atrás, y está cerrada
 
-Esto se dio por resuelto y **no lo está**. El razonamiento que parecía cerrarlo
-era que en Wayland un cliente no puede leer la pantalla por su cuenta, así que
-todo lo que capture tiene que pasar por el portal.
-
-Es falso en un compositor wlroots. Medido el 2026-09-15 en una sesión de
-VasakOS, con el escritorio andando:
+El razonamiento que parecía cerrarla desde el principio era que en Wayland un
+cliente no puede leer la pantalla por su cuenta, así que todo lo que capture
+tiene que pasar por el portal. Es falso en un compositor wlroots, y se midió el
+2026-09-15 en una sesión de VasakOS con el escritorio andando:
 
 ```
 $ grim prueba.png
@@ -430,16 +428,45 @@ La pantalla entera, sin portal, sin diálogo y sin que nada quedara anotado.
 `zwlr_screencopy_manager_v1` le alcanza a cualquier cliente que sepa pedirlo, y
 es el mismo protocolo del que depende `xdg-desktop-portal-wlr` para capturar.
 
-O sea que compartir la pantalla está en la misma situación que la cámara: el
-portal cierra la puerta de las aplicaciones que se comportan, y la que no se
-comporta la tiene abierta igual. La diferencia es que acá no hay ni siquiera un
-perfil de AppArmor que cubra la vía directa, porque no es un archivo de
-dispositivo que se pueda negar: es un protocolo de Wayland.
+**Lo que la cerró no fue `security-context-v1`.** Ese protocolo está expuesto
+—es el pensado para esto— pero sólo alcanza a los clientes que entran por un
+socket «en caja», y hoy no entra nadie por ahí. Lo que la cerró es el filtro de
+globals de Wayfire: `permisos-globales`, en `vasak-wayfire-plugins`, decide
+**qué se le anuncia a cada cliente** según el ejecutable que hay del otro lado
+del socket, y lo que no se anuncia no se puede pedir. Mismo comando, 2026-09-23:
 
-Lo que **no** se midió, y hace falta antes de decidir nada: si Wayfire puede
-restringir `zwlr_screencopy_manager_v1` por cliente —`wp_security_context_manager_v1`
-está expuesto, que es el protocolo pensado justamente para eso—, y qué se
-rompería al hacerlo: `vasak-shot` y cualquier grabador usan ese mismo camino.
+```
+$ grim prueba.png
+compositor doesn't support the screen capture protocol
+```
+
+**Y hubo un segundo capítulo, que es el que enseña algo.** Con el filtro puesto,
+esto todavía capturaba:
+
+```
+$ cat programa-cualquiera.sh
+#!/usr/bin/env bash
+grim "$1" 2>&1
+
+$ ./programa-cualquiera.sh porlacara.png   # 290 950 bytes
+```
+
+Porque `grim` estaba en la lista de permitidos —`vasak-shot` no tomaba los
+píxeles, lo llamaba a él— y `grim` lo puede ejecutar cualquiera. Una lista por
+ejecutable no cierra nada si adentro hay una herramienta de uso general: no hace
+falta hablar el protocolo, alcanza con pedírselo a quien sí puede. Desde
+`vasak-shot` 0.7.0 la captura la hace él mismo y `grim` salió de la lista; el
+mismo script hoy no consigue nada.
+
+Queda dicho lo que esto **no** es: la lista mira el ejecutable, así que sigue
+sin distinguir dos instancias del mismo programa, y no hay diálogo — es una
+lista fija del escritorio, no un permiso por aplicación. Para una aplicación de
+terceros el camino sigue siendo el portal, que pregunta.
+
+La medición se rehace con `pruebas/captura-sin-permiso.sh`, que pide las dos
+formas —directa y por intermediario— y comprueba además que la herramienta que
+sí captura siga en la lista: con la lista vacía las dos negaciones pasan en
+verde y el escritorio se queda sin capturas.
 
 ### Entonces
 
@@ -456,7 +483,8 @@ La corrección del `app_id` **no cambia esta decisión**, y conviene decirlo
 porque invita a pensar lo contrario: que el portal ahora recuerde y revoque no
 alcanza a la aplicación que no lo usa, que es justo la que preocupa.
 
-Lo que sostiene la espera es que la pantalla no promete de más. El texto de
+De la pantalla ya no queda espera: lo de arriba está hecho y empaquetado. Lo que
+sostiene la de la cámara es que la pantalla de Privacidad no promete de más. El texto de
 alcance de Privacidad y seguridad nombra que una aplicación que se los pida a
 PipeWire todavía no se detiene, y desde `vasak-settings#83` nombra también hasta
 dónde llega el perfil de AppArmor: **sólo a los AppImage de la carpeta del
