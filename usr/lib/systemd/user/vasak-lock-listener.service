@@ -1,0 +1,58 @@
+# Bloquear cuando alguien lo pide: escucha la señal `Lock` de logind y lanza
+# vasak-lock-screen.
+#
+# `loginctl lock-session` —o `org.freedesktop.login1.Session.Lock` por D-Bus,
+# que es lo mismo— no bloquea nada por sí solo: logind emite la señal `Lock` en
+# la sesión y espera que algún programa de la sesión la escuche y ponga la
+# pantalla de bloqueo. Hasta acá nadie la escuchaba: el swayidle de
+# vasak-idle.service no tiene el evento `lock`, así que pedir el bloqueo así no
+# hacía nada, sin error. Esta unidad es ese oyente. La usa el botón Bloquear del
+# centro de control (vasak-desktop#190), y cualquier programa que pida el
+# bloqueo como lo pide el resto de Linux.
+#
+# Va en una unidad aparte y no como un `lock` más dentro de vasak-idle.service
+# por dos motivos:
+#
+#   1. Configuración (Energía) reescribe esa unidad en ~/.config/systemd/user/
+#      cada vez que se guarda, y la apaga entera si se desactiva el bloqueo por
+#      inactividad. Un oyente adentro se perdería en el primer guardado, o con
+#      el bloqueo por inactividad apagado, que no tiene nada que ver con poder
+#      bloquear a mano.
+#   2. Así no hay dos oyentes: vasak-idle sigue sin `lock`, y la señal la
+#      atiende uno solo.
+#
+# swayidle sin ningún `timeout` no mira la inactividad: sólo se queda esperando
+# las señales de logind. Fuera de una sesión —esto corre como servicio del
+# usuario, no dentro del ámbito de la sesión— pide `GetSession("auto")`, que es
+# la sesión gráfica del usuario: la misma que resuelve
+# `/org/freedesktop/login1/session/auto`, que es la que bloquea el escritorio.
+#
+# El bloqueo va con -d por lo mismo que el de antes de suspender en
+# vasak-idle.service: con -w swayidle espera a que el comando termine, y sin -d
+# el comando termina recién al desbloquear. Con -d vuelve apenas la pantalla
+# quedó cubierta.
+#
+# Y en su propio ámbito con systemd-run, como en vasak-idle.service: un
+# bloqueo que vive en el cgroup de esta unidad muere si la unidad se reinicia,
+# y un cliente de bloqueo que muere con la sesión tomada deja al compositor
+# bloqueado sin dónde escribir la contraseña. Por el mismo motivo esta unidad
+# va **sin endurecer**: el bloqueo hereda los privilegios de swayidle, y PAM
+# necesita poder ejecutar unix_chkpwd (ver el comentario largo de
+# vasak-idle.service).
+#
+# Viene habilitada por el paquete: el enlace en
+# graphical-session.target.wants/ está al lado de este archivo, como el de
+# pipewire.socket en sockets.target.wants/.
+[Unit]
+Description=Bloqueo a pedido de VasakOS (escucha la señal Lock de logind)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/swayidle -w \
+    lock 'systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen -d'
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target
