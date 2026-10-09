@@ -142,6 +142,11 @@ profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage {
   # La base del llavero: ahí están todas las contraseñas de la sesión.
   audit deny @{HOME}/.local/share/vasak-keyring/** rwkl,
 
+  # Y el socket por donde llega la contraseña al iniciar sesión. El demonio ya
+  # sólo acepta a root ahí (vasak-keyring#42), pero que un AppImage ni llegue a
+  # conectarse no puede depender de ese chequeo.
+  audit deny /run/user/*/vasak-keyring/** rw,
+
   # El agente es peor que la clave. Con el socket no hace falta leer ningún
   # archivo para firmar con ella, así que negar sólo `~/.ssh` dejaría la puerta
   # de al lado abierta.
