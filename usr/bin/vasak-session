@@ -60,6 +60,17 @@ export ELECTRON_OZONE_PLATFORM_HINT=auto
 export OZONE_PLATFORM_HINT=auto
 export NIXOS_OZONE_WL=1
 
+# El llavero para Chromium y Electron. vasak-keyring sirve
+# `org.freedesktop.secrets`, pero Chromium no lo busca en D-Bus: elige dónde
+# guardar sus claves según el nombre del escritorio, y «Vasak» no está en su
+# lista, así que caía en `basic_text` —contraseñas y sesiones en texto plano—
+# y apps como Claude o VS Code avisaban que no había llavero. Ningún nombre de
+# XDG_CURRENT_DESKTOP sirve sin romper otra cosa (sumar `GNOME` haría arrancar
+# los autostart con `OnlyShowIn=GNOME;`, gnome-keyring incluido), pero cuando
+# no reconoce el escritorio Chromium mira esta variable antigua, y con ella usa
+# libsecret, que habla con vasak-keyring. El valor es el que pone el propio GNOME.
+export GNOME_DESKTOP_SESSION_ID=this-is-deprecated
+
 # Extra desktop integrations.
 export CLUTTER_BACKEND=wayland
 export _JAVA_AWT_WM_NONREPARENTING=1
