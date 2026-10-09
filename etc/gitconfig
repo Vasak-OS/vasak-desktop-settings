@@ -1,0 +1,25 @@
+# Las credenciales de git por HTTPS, para que no se pidan en cada push.
+#
+# Sin un credential helper, git le pregunta usuario y contraseña a SSH_ASKPASS
+# cada vez. Con estos dos, se pregunta una sola vez —y en github.com, si hay
+# sesión de `gh`, ni eso—. Por SSH no cambia nada: eso lo resuelven el agente y
+# vasak-ssh-askpass.
+#
+# Git consulta los helpers en este orden y usa el primero que contesta:
+#
+#   1. github.com: el token de `gh`, que es lo que ya funciona en cuanto alguien
+#      corrió `gh auth login`. Sin `gh` instalado, o sin sesión, no contesta y
+#      sigue el siguiente.
+#   2. Cualquier host: git-credential-libsecret, o sea vasak-keyring. La primera
+#      vez no tiene nada; git abre el diálogo de vasak-ssh-askpass y, si el
+#      servidor acepta lo escrito, lo guarda acá. Una contraseña rechazada no
+#      se guarda, y una guardada que deja de servir se borra sola.
+#
+# Cada cuenta lo puede pisar en su ~/.gitconfig: un `helper =` vacío vacía la
+# lista.
+[credential "https://github.com"]
+	helper = "!f() { command -v gh >/dev/null 2>&1 || exit 0; exec gh auth git-credential \"$@\"; }; f"
+[credential "https://gist.github.com"]
+	helper = "!f() { command -v gh >/dev/null 2>&1 || exit 0; exec gh auth git-credential \"$@\"; }; f"
+[credential]
+	helper = /usr/lib/git-core/git-credential-libsecret
