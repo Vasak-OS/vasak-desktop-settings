@@ -116,4 +116,9 @@ fi
 # `-D Vasak` no borraba nada; pero entonces el archivo decía dos cosas
 # distintas en dos líneas, y cuál gana dependía de un valor por omisión de uwsm
 # que ninguna de las dos líneas nombra.
-exec uwsm start -D Vasak:wlroots wayfire
+# La salida de uwsm/wayfire va al journal, no al vt7. greetd le deja a la sesión
+# la consola del vt7, así que sin esto las líneas de arranque de wayfire se
+# imprimen sobre ella justo en el hueco entre el greeter y el escritorio y se ven
+# como «letras» antes de que dibuje nada. En el journal quedan igual para
+# depurar: `journalctl --user -t vasak-session`.
+exec systemd-cat -t vasak-session -- uwsm start -D Vasak:wlroots wayfire
