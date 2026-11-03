@@ -93,12 +93,19 @@ profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage {
   mount,
   umount,
   pivot_root,
-  change_profile,
   io_uring,
   mqueue,
   # Sin esto no arrancan los que se aíslan a sí mismos —los de Electron, sobre
   # todo—, que montan su propio espacio de nombres.
   userns,
+
+  # El salto de perfil, negado del todo. Sin esto un AppImage confinado podría
+  # llamar `aa_change_profile("unconfined")` —o saltar a otro perfil que permita
+  # más— y anular de un saque todas las negaciones de abajo. No hay AppImage
+  # legítimo que lo use (Chrome y Electron se aíslan con espacios de nombres, no
+  # con esta API), así que se niega entero; si alguno lo necesitara, se acota con
+  # `change_profile -> <perfil>`.
+  audit deny change_profile,
 
   # La cámara, por la vía directa.
   audit deny /dev/video* rwk,
