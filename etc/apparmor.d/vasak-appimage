@@ -107,6 +107,15 @@ profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage {
   # `change_profile -> <perfil>`.
   audit deny change_profile,
 
+  # Y lo otro que deja reescribir el propio confinamiento: apparmorfs. Con
+  # `capability,` y `file,` amplios, en teoría un AppImage podría escribir en
+  # `/sys/kernel/security/apparmor/.replace` y cambiarse el perfil. Hoy el kernel
+  # ya lo rechaza —administrar política exige una etiqueta unconfined, y el
+  # AppImage está confinado—, pero se niega la escritura igual, como defensa en
+  # profundidad. Sólo `w`: leer apparmorfs (saber bajo qué perfil corre) es
+  # legítimo.
+  audit deny /sys/kernel/security/apparmor/** w,
+
   # La cámara, por la vía directa.
   audit deny /dev/video* rwk,
 
