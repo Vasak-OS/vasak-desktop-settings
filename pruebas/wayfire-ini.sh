@@ -236,6 +236,21 @@ printf '%s' "$autostart" | grep -q 'uwsm finalize' \
     && ok 'uwsm finalize sigue en su lugar' \
     || mal 'falta uwsm finalize: sin eso la sesión no exporta su entorno y la unidad del escritorio arranca a ciegas'
 
+# ---------------------------------------------------------------------------
+tema 'Super+N salta directo al espacio N'
+
+# La grilla es 3×2 (core.vwidth × core.vheight): seis espacios. Sin estos
+# atajos sólo se puede ir de a uno con las flechas, y Wayfire no avisa de que
+# falten.
+seccion_vswitch=$(sed -n '/^\[vswitch\]/,/^\[/p' "$INI")
+for n in 1 2 3 4 5 6; do
+    if printf '%s' "$seccion_vswitch" | grep -qE "^binding_${n}[[:space:]]*=[[:space:]]*<super> KEY_${n}[[:space:]]*$"; then
+        ok "binding_${n} salta al espacio ${n} con «<super> KEY_${n}»"
+    else
+        mal "[vswitch] tiene que tener «binding_${n} = <super> KEY_${n}»"
+    fi
+done
+
 printf '\n'
 if [ "$fallos" -eq 0 ]; then
     printf '\033[32mTodo bien.\033[0m\n'
