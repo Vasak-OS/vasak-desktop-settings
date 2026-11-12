@@ -94,6 +94,35 @@ else
     ok "y sin negaciones mudas: los intentos quedan anotados"
 fi
 
+tema '== el nodo del directorio, no sólo su contenido =='
+
+# `<ruta>/**` niega lo de adentro pero no el directorio mismo: un AppImage
+# podía rename() + symlink() del nodo y leer por el nombre nuevo. Conviven dos
+# reglas por ruta: la de contenido (`/**`) y la del nodo (`<ruta> wl`, sin `/`
+# ni `**` al final: la ruta va seguida de un espacio y los flags).
+nodo_tiene() { grep -qE "^\s*audit deny $1 [rwkl]*$2[rwkl]*,\s*\$" <<<"$cuerpo"; }
+
+for nodo in '@\{HOME\}/\.ssh' '@\{HOME\}/\.gnupg' \
+            '@\{HOME\}/\.local/share/vasak-keyring' '/run/user/\*/vasak-keyring' \
+            '/run/user/\*/gnupg' '@\{HOME\}/\.aws' '@\{HOME\}/\.kube' \
+            '@\{HOME\}/\.config/gh'; do
+    for f in w l; do
+        if nodo_tiene "$nodo" "$f"; then
+            ok "el perfil niega el nodo $nodo con '$f'"
+        else
+            mal "falta 'audit deny $nodo …$f,': un AppImage renombra el directorio y lo redirige"
+        fi
+    done
+    if nodo_tiene "$nodo/\\*\\*" w; then
+        ok "y la regla de contenido $nodo/** sigue ahí"
+    else
+        mal "se perdió la regla de contenido $nodo/**: el nodo solo no niega lo de adentro"
+    fi
+    if grep -qE "^\s*deny $nodo [rwkl]*,\s*\$" <<<"$cuerpo"; then
+        mal "el nodo $nodo se niega sin audit: el intento no queda anotado"
+    fi
+done
+
 tema '== la ruta que se niega es la que usa el demonio =='
 
 # Si el demonio mueve el socket, la regla queda negando un directorio vacío y

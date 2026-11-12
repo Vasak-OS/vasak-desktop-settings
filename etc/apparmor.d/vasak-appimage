@@ -179,5 +179,62 @@ profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage {
   audit deny @{HOME}/.config/gh/** rwkl,
   audit deny @{HOME}/.docker/config.json rwkl,
 
+  # ── Lo que redirige o secuestra al asistente (Lince) ──────────────────────
+  #
+  # Salió de las revisiones de seguridad de vasak-assistant#1 y #2.
+  #
+  # `~/.config/vasak/vasak.conf` lleva la sección `assistant`: `allow_remote`,
+  # la URL y el modelo. Un AppImage que la reescriba —poniendo `allow_remote:
+  # true` y su propia URL— manda, desde el próximo arranque del servicio, todas
+  # las conversaciones a su servidor. La clave guardada no lo acompaña (está
+  # atada a la URL anterior), pero el contenido sí. Se niega **escribir** todo
+  # `~/.config/vasak/`, no leer: un AppImage puede querer el esquema de color
+  # para integrarse al tema. La `l` corta el enlace duro que escribiría por
+  # afuera del directorio negado.
+  audit deny @{HOME}/.config/vasak/** wl,
+
+  # Las unidades de usuario de systemd. Con `file,` amplio, un AppImage podía
+  # dejar un drop-in
+  # `~/.config/systemd/user/vasak-assistant.service.d/override.conf` con su
+  # propio `ExecStart=` y, al próximo arranque, SER la unidad que el owner-check
+  # por cgroup da por verificada (vasak-assistant#5). Sin esto, esa verificación
+  # queda en decorado frente a un AppImage.
+  audit deny @{HOME}/.config/systemd/user/** rwkl,
+
+  # La memoria de Lince, cifrada. Un AppImage no la lee —va cifrada—, pero sin
+  # esto podía borrarla o reemplazar sus archivos.
+  audit deny @{HOME}/.local/state/vasak-assistant/** rwkl,
+
+  # ── Cerrar el reemplazo del directorio contenedor ─────────────────────────
+  #
+  # Todas las reglas de arriba con glob `.../**` niegan el CONTENIDO del
+  # directorio, pero no el nodo del directorio en sí. Con `file,` permitido, un
+  # AppImage podía `rename()` el directorio a otro nombre y dejar un symlink en su
+  # lugar —ninguna de las dos operaciones toca una ruta `.../**`— y después leer
+  # la clave, o redirigir la config, por el nombre nuevo; o conectarse al socket
+  # del agente, que sigue escuchando en el inodo renombrado. Negar `w` sobre el
+  # nodo bloquea el rename, el symlink y el borrado del propio directorio (`l`
+  # por consistencia con las reglas de arriba).
+  #
+  # Alcance: es cierre TOTAL donde el directorio padre no es escribible por el
+  # usuario —los hijos directos de HOME, porque `/home` no deja crear el
+  # hermano del rename—. Donde el padre SÍ es escribible (`~/.config`,
+  # `~/.local/share`, `~/.local/state`, `/run/user/<uid>`), sube la vara pero el
+  # mismo truco un nivel más arriba sigue abierto, y no se puede cerrar acá sin
+  # negar escribir esos directorios —que las apps legítimas necesitan—. Ese
+  # cierre es del lado del servicio que lee el archivo (abrirlo con `O_NOFOLLOW`
+  # y verificar la ruta). Ver AVISOS.md.
+  audit deny @{HOME}/.ssh wl,
+  audit deny @{HOME}/.gnupg wl,
+  audit deny @{HOME}/.local/share/vasak-keyring wl,
+  audit deny /run/user/*/vasak-keyring wl,
+  audit deny /run/user/*/gnupg wl,
+  audit deny @{HOME}/.aws wl,
+  audit deny @{HOME}/.kube wl,
+  audit deny @{HOME}/.config/gh wl,
+  audit deny @{HOME}/.config/vasak wl,
+  audit deny @{HOME}/.config/systemd/user wl,
+  audit deny @{HOME}/.local/state/vasak-assistant wl,
+
   include if exists <local/vasak-appimage>
 }
