@@ -106,6 +106,15 @@ if [ -x /usr/bin/vasak-config-migrate ]; then
     /usr/bin/vasak-config-migrate || true
 fi
 
+# Cursor por software en máquinas virtuales. Sobre QEMU/virt-manager y VMware el
+# cursor por hardware de wlroots se dibuja invertido, duplicado y desfasado unos
+# centímetros; en hardware real anda bien. `--vm` deja afuera los contenedores,
+# que no pintan un cursor. Es el `WLR_NO_HARDWARE_CURSORS=1` que la gente ponía a
+# mano, puesto solo donde hace falta y sin pisar un valor ya elegido.
+if systemd-detect-virt --vm --quiet; then
+    export WLR_NO_HARDWARE_CURSORS="${WLR_NO_HARDWARE_CURSORS:-1}"
+fi
+
 # Launch Wayfire under uwsm so the whole graphical session is a proper systemd
 # user unit hierarchy: correct environment propagation (via `uwsm finalize` in
 # wayfire.ini), supervised graphical-session daemons, and clean teardown at
