@@ -236,5 +236,68 @@ profile vasak-appimage @{HOME}/**/*.[aA]pp[iI]mage {
   audit deny @{HOME}/.config/systemd/user wl,
   audit deny @{HOME}/.local/state/vasak-assistant wl,
 
+  # ── Lanzar un proceso sin confinar ────────────────────────────────────────
+  #
+  # Sale de la re-revisión de seguridad de la Fase 4 de Lince (vasak-assistant#1,
+  # desktop-settings#13). Un proceso que un AppImage logra lanzar sin perfil queda
+  # con etiqueta `unconfined`, así que esquiva TODAS las puertas que miran la
+  # etiqueta —la de Lince (`LinuxSecurityLabel`) y cualquier otra—. `change_profile`
+  # ya está negado arriba, y `~/.config/systemd/user` también (secuestro por
+  # drop-in). Faltan los otros caminos.
+  #
+  # 1) Pedirle al gestor de systemd del usuario que arranque una unidad
+  # transitoria (`systemd-run --user`, `StartTransientUnit`): lo que arranca así
+  # corre fuera de este perfil. Va al nombre `org.freedesktop.systemd1` por el bus
+  # de sesión, y además por el socket privado del gestor, que es el camino que usa
+  # `systemctl --user` sin D-Bus. El nodo del directorio del socket, por el rename
+  # (el gestor sigue escuchando en el inodo renombrado).
+  audit deny dbus send bus=session peer=(name=org.freedesktop.systemd1),
+  # Y por interfaz, no sólo por nombre: si el AppImage resuelve el nombre único del
+  # gestor (`GetNameOwner`) y le manda al `:1.N`, la regla por `peer=(name=…)`
+  # podría no alcanzarlo según la versión de dbus-daemon. Negar la interfaz del
+  # gestor cierra `StartTransientUnit`/`StartUnit`/… sin depender de esa
+  # resolución.
+  audit deny dbus send bus=session interface=org.freedesktop.systemd1.Manager,
+  audit deny /run/user/*/systemd/private rw,
+  audit deny /run/user/*/systemd wl,
+  # Hermano de `systemd/user/` (no lo cubre `user/**`), por simetría.
+  audit deny @{HOME}/.config/systemd/user.control/** rwkl,
+  audit deny @{HOME}/.config/systemd/user.control wl,
+
+  # 2) Persistencia por archivos que se ejecutan al iniciar la sesión o un shell:
+  # lo que se deje acá corre en el próximo arranque, sin perfil. Los directorios
+  # llevan también el nodo (ver arriba); los archivos sueltos sólo `wl` —no se
+  # pueden renombrar porque su padre, HOME, no es escribible por el usuario—.
+  audit deny @{HOME}/.config/autostart/** wl,
+  audit deny @{HOME}/.config/autostart wl,
+  audit deny @{HOME}/.config/environment.d/** wl,
+  audit deny @{HOME}/.config/environment.d wl,
+
+  # El autostart PRIMARIO de la sesión de VasakOS. Wayfire corre unconfined (lo
+  # lanza `vasak-session`) y hace fork+exec de las entradas `[autostart]` y
+  # `[command]` de `wayfire.ini` —relee la config sola, así que una entrada nueva
+  # queda activa sin reiniciar—; uwsm sourcea como shell sus archivos `env-*`. Lo
+  # que se deje ahí nace unconfined: el mismo escape que `autostart`, por el camino
+  # específico de VasakOS, que es el que de verdad importa acá.
+  audit deny @{HOME}/.config/wayfire.ini wl,
+  audit deny @{HOME}/.config/uwsm/** wl,
+  audit deny @{HOME}/.config/uwsm wl,
+
+  # Arranque de sesión X. En Wayland/Wayfire no se leen, pero se shippea
+  # `etc/skel/.xinitrc` y alguien podría arrancar con `startx`. Archivos sueltos,
+  # como los de shell.
+  audit deny @{HOME}/.xprofile wl,
+  audit deny @{HOME}/.xsession wl,
+  audit deny @{HOME}/.xinitrc wl,
+
+  audit deny @{HOME}/.bashrc wl,
+  audit deny @{HOME}/.bash_profile wl,
+  audit deny @{HOME}/.bash_login wl,
+  audit deny @{HOME}/.profile wl,
+  audit deny @{HOME}/.zshrc wl,
+  audit deny @{HOME}/.zprofile wl,
+  audit deny @{HOME}/.zshenv wl,
+  audit deny @{HOME}/.zlogin wl,
+
   include if exists <local/vasak-appimage>
 }
